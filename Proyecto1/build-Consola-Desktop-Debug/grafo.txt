@@ -1,0 +1,14 @@
+digraph G{node[shape="box"];NodoAST0[label="-1COMANDO"];
+NodoAST1[label="0MKDISK"];
+NodoAST0->NodoAST1;
+NodoAST2[label="-2PARAMETRO"];
+NodoAST1->NodoAST2;
+NodoAST3[label="4PATH"];
+NodoAST2->NodoAST3;
+NodoAST4[label="25/home/de/d.disk"];
+NodoAST3->NodoAST4;
+NodoAST5[label="1SIZE"];
+NodoAST2->NodoAST5;
+NodoAST6[label="23787"];
+NodoAST5->NodoAST6;
+}

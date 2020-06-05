@@ -1,0 +1,562 @@
+Terminals unused in grammar
+
+    ruta
+    rff
+    rwf
+    rfull
+    rfast
+    rmbr
+    rdisk
+    numero
+    iden
+    cadena
+
+
+Grammar
+
+    0 $accept: INICIO $end
+
+    1 INICIO: LCOMANDOS
+
+    2 LCOMANDOS: LCOMANDOS COMANDO
+    3          | COMANDO
+
+    4 COMANDO: rmkdisk LPARAM
+    5        | rrmdisk LPARAM
+    6        | rfdisk LPARAM
+    7        | rmount LPARAM
+    8        | runmount LPARAM
+    9        | rrep LPARAM
+   10        | rexec LPARAM
+
+   11 LPARAM: LPARAM guion PARAMETRO
+   12       | guion PARAMETRO
+
+   13 PARAMETRO: rsize igual DATO
+   14          | rfit igual DATO
+   15          | runit igual DATO
+   16          | rpath igual DATO
+   17          | rtype igual DATO
+   18          | rdelete igual DATO
+   19          | rname igual DATO
+   20          | radd igual DATO
+   21          | rid igual DATO
+
+   22 DATO: rbf
+
+
+Terminals, with rules where they appear
+
+    $end (0) 0
+    error (256)
+    ruta <TEXT> (258)
+    guion <TEXT> (259) 11 12
+    igual <TEXT> (260) 13 14 15 16 17 18 19 20 21
+    rmkdisk <TEXT> (261) 4
+    rsize <TEXT> (262) 13
+    rfit <TEXT> (263) 14
+    runit <TEXT> (264) 15
+    rpath <TEXT> (265) 16
+    rrmdisk <TEXT> (266) 5
+    rfdisk <TEXT> (267) 6
+    rtype <TEXT> (268) 17
+    radd <TEXT> (269) 20
+    rdelete <TEXT> (270) 18
+    rname <TEXT> (271) 19
+    rmount <TEXT> (272) 7
+    runmount <TEXT> (273) 8
+    rid <TEXT> (274) 21
+    rrep <TEXT> (275) 9
+    rexec <TEXT> (276) 10
+    rbf <TEXT> (277) 22
+    rff <TEXT> (278)
+    rwf <TEXT> (279)
+    rfull <TEXT> (280)
+    rfast <TEXT> (281)
+    rmbr <TEXT> (282)
+    rdisk <TEXT> (283)
+    numero <TEXT> (284)
+    iden <TEXT> (285)
+    cadena <TEXT> (286)
+
+
+Nonterminals, with rules where they appear
+
+    $accept (32)
+        on left: 0
+    INICIO <nodito> (33)
+        on left: 1
+        on right: 0
+    LCOMANDOS <nodito> (34)
+        on left: 2 3
+        on right: 1 2
+    COMANDO <nodito> (35)
+        on left: 4 5 6 7 8 9 10
+        on right: 2 3
+    LPARAM <nodito> (36)
+        on left: 11 12
+        on right: 4 5 6 7 8 9 10 11
+    PARAMETRO <nodito> (37)
+        on left: 13 14 15 16 17 18 19 20 21
+        on right: 11 12
+    DATO <nodito> (38)
+        on left: 22
+        on right: 13 14 15 16 17 18 19 20 21
+
+
+State 0
+
+    0 $accept: . INICIO $end
+
+    rmkdisk   shift, and go to state 1
+    rrmdisk   shift, and go to state 2
+    rfdisk    shift, and go to state 3
+    rmount    shift, and go to state 4
+    runmount  shift, and go to state 5
+    rrep      shift, and go to state 6
+    rexec     shift, and go to state 7
+
+    INICIO     go to state 8
+    LCOMANDOS  go to state 9
+    COMANDO    go to state 10
+
+
+State 1
+
+    4 COMANDO: rmkdisk . LPARAM
+
+    guion  shift, and go to state 11
+
+    LPARAM  go to state 12
+
+
+State 2
+
+    5 COMANDO: rrmdisk . LPARAM
+
+    guion  shift, and go to state 11
+
+    LPARAM  go to state 13
+
+
+State 3
+
+    6 COMANDO: rfdisk . LPARAM
+
+    guion  shift, and go to state 11
+
+    LPARAM  go to state 14
+
+
+State 4
+
+    7 COMANDO: rmount . LPARAM
+
+    guion  shift, and go to state 11
+
+    LPARAM  go to state 15
+
+
+State 5
+
+    8 COMANDO: runmount . LPARAM
+
+    guion  shift, and go to state 11
+
+    LPARAM  go to state 16
+
+
+State 6
+
+    9 COMANDO: rrep . LPARAM
+
+    guion  shift, and go to state 11
+
+    LPARAM  go to state 17
+
+
+State 7
+
+   10 COMANDO: rexec . LPARAM
+
+    guion  shift, and go to state 11
+
+    LPARAM  go to state 18
+
+
+State 8
+
+    0 $accept: INICIO . $end
+
+    $end  shift, and go to state 19
+
+
+State 9
+
+    1 INICIO: LCOMANDOS .
+    2 LCOMANDOS: LCOMANDOS . COMANDO
+
+    rmkdisk   shift, and go to state 1
+    rrmdisk   shift, and go to state 2
+    rfdisk    shift, and go to state 3
+    rmount    shift, and go to state 4
+    runmount  shift, and go to state 5
+    rrep      shift, and go to state 6
+    rexec     shift, and go to state 7
+
+    $default  reduce using rule 1 (INICIO)
+
+    COMANDO  go to state 20
+
+
+State 10
+
+    3 LCOMANDOS: COMANDO .
+
+    $default  reduce using rule 3 (LCOMANDOS)
+
+
+State 11
+
+   12 LPARAM: guion . PARAMETRO
+
+    rsize    shift, and go to state 21
+    rfit     shift, and go to state 22
+    runit    shift, and go to state 23
+    rpath    shift, and go to state 24
+    rtype    shift, and go to state 25
+    radd     shift, and go to state 26
+    rdelete  shift, and go to state 27
+    rname    shift, and go to state 28
+    rid      shift, and go to state 29
+
+    PARAMETRO  go to state 30
+
+
+State 12
+
+    4 COMANDO: rmkdisk LPARAM .
+   11 LPARAM: LPARAM . guion PARAMETRO
+
+    guion  shift, and go to state 31
+
+    $default  reduce using rule 4 (COMANDO)
+
+
+State 13
+
+    5 COMANDO: rrmdisk LPARAM .
+   11 LPARAM: LPARAM . guion PARAMETRO
+
+    guion  shift, and go to state 31
+
+    $default  reduce using rule 5 (COMANDO)
+
+
+State 14
+
+    6 COMANDO: rfdisk LPARAM .
+   11 LPARAM: LPARAM . guion PARAMETRO
+
+    guion  shift, and go to state 31
+
+    $default  reduce using rule 6 (COMANDO)
+
+
+State 15
+
+    7 COMANDO: rmount LPARAM .
+   11 LPARAM: LPARAM . guion PARAMETRO
+
+    guion  shift, and go to state 31
+
+    $default  reduce using rule 7 (COMANDO)
+
+
+State 16
+
+    8 COMANDO: runmount LPARAM .
+   11 LPARAM: LPARAM . guion PARAMETRO
+
+    guion  shift, and go to state 31
+
+    $default  reduce using rule 8 (COMANDO)
+
+
+State 17
+
+    9 COMANDO: rrep LPARAM .
+   11 LPARAM: LPARAM . guion PARAMETRO
+
+    guion  shift, and go to state 31
+
+    $default  reduce using rule 9 (COMANDO)
+
+
+State 18
+
+   10 COMANDO: rexec LPARAM .
+   11 LPARAM: LPARAM . guion PARAMETRO
+
+    guion  shift, and go to state 31
+
+    $default  reduce using rule 10 (COMANDO)
+
+
+State 19
+
+    0 $accept: INICIO $end .
+
+    $default  accept
+
+
+State 20
+
+    2 LCOMANDOS: LCOMANDOS COMANDO .
+
+    $default  reduce using rule 2 (LCOMANDOS)
+
+
+State 21
+
+   13 PARAMETRO: rsize . igual DATO
+
+    igual  shift, and go to state 32
+
+
+State 22
+
+   14 PARAMETRO: rfit . igual DATO
+
+    igual  shift, and go to state 33
+
+
+State 23
+
+   15 PARAMETRO: runit . igual DATO
+
+    igual  shift, and go to state 34
+
+
+State 24
+
+   16 PARAMETRO: rpath . igual DATO
+
+    igual  shift, and go to state 35
+
+
+State 25
+
+   17 PARAMETRO: rtype . igual DATO
+
+    igual  shift, and go to state 36
+
+
+State 26
+
+   20 PARAMETRO: radd . igual DATO
+
+    igual  shift, and go to state 37
+
+
+State 27
+
+   18 PARAMETRO: rdelete . igual DATO
+
+    igual  shift, and go to state 38
+
+
+State 28
+
+   19 PARAMETRO: rname . igual DATO
+
+    igual  shift, and go to state 39
+
+
+State 29
+
+   21 PARAMETRO: rid . igual DATO
+
+    igual  shift, and go to state 40
+
+
+State 30
+
+   12 LPARAM: guion PARAMETRO .
+
+    $default  reduce using rule 12 (LPARAM)
+
+
+State 31
+
+   11 LPARAM: LPARAM guion . PARAMETRO
+
+    rsize    shift, and go to state 21
+    rfit     shift, and go to state 22
+    runit    shift, and go to state 23
+    rpath    shift, and go to state 24
+    rtype    shift, and go to state 25
+    radd     shift, and go to state 26
+    rdelete  shift, and go to state 27
+    rname    shift, and go to state 28
+    rid      shift, and go to state 29
+
+    PARAMETRO  go to state 41
+
+
+State 32
+
+   13 PARAMETRO: rsize igual . DATO
+
+    rbf  shift, and go to state 42
+
+    DATO  go to state 43
+
+
+State 33
+
+   14 PARAMETRO: rfit igual . DATO
+
+    rbf  shift, and go to state 42
+
+    DATO  go to state 44
+
+
+State 34
+
+   15 PARAMETRO: runit igual . DATO
+
+    rbf  shift, and go to state 42
+
+    DATO  go to state 45
+
+
+State 35
+
+   16 PARAMETRO: rpath igual . DATO
+
+    rbf  shift, and go to state 42
+
+    DATO  go to state 46
+
+
+State 36
+
+   17 PARAMETRO: rtype igual . DATO
+
+    rbf  shift, and go to state 42
+
+    DATO  go to state 47
+
+
+State 37
+
+   20 PARAMETRO: radd igual . DATO
+
+    rbf  shift, and go to state 42
+
+    DATO  go to state 48
+
+
+State 38
+
+   18 PARAMETRO: rdelete igual . DATO
+
+    rbf  shift, and go to state 42
+
+    DATO  go to state 49
+
+
+State 39
+
+   19 PARAMETRO: rname igual . DATO
+
+    rbf  shift, and go to state 42
+
+    DATO  go to state 50
+
+
+State 40
+
+   21 PARAMETRO: rid igual . DATO
+
+    rbf  shift, and go to state 42
+
+    DATO  go to state 51
+
+
+State 41
+
+   11 LPARAM: LPARAM guion PARAMETRO .
+
+    $default  reduce using rule 11 (LPARAM)
+
+
+State 42
+
+   22 DATO: rbf .
+
+    $default  reduce using rule 22 (DATO)
+
+
+State 43
+
+   13 PARAMETRO: rsize igual DATO .
+
+    $default  reduce using rule 13 (PARAMETRO)
+
+
+State 44
+
+   14 PARAMETRO: rfit igual DATO .
+
+    $default  reduce using rule 14 (PARAMETRO)
+
+
+State 45
+
+   15 PARAMETRO: runit igual DATO .
+
+    $default  reduce using rule 15 (PARAMETRO)
+
+
+State 46
+
+   16 PARAMETRO: rpath igual DATO .
+
+    $default  reduce using rule 16 (PARAMETRO)
+
+
+State 47
+
+   17 PARAMETRO: rtype igual DATO .
+
+    $default  reduce using rule 17 (PARAMETRO)
+
+
+State 48
+
+   20 PARAMETRO: radd igual DATO .
+
+    $default  reduce using rule 20 (PARAMETRO)
+
+
+State 49
+
+   18 PARAMETRO: rdelete igual DATO .
+
+    $default  reduce using rule 18 (PARAMETRO)
+
+
+State 50
+
+   19 PARAMETRO: rname igual DATO .
+
+    $default  reduce using rule 19 (PARAMETRO)
+
+
+State 51
+
+   21 PARAMETRO: rid igual DATO .
+
+    $default  reduce using rule 21 (PARAMETRO)
