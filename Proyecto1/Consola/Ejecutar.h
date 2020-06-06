@@ -2,7 +2,8 @@
 #define EJECUTAR_H
 
 #include "Analizador/Nodo.h"
-#include "string.h"
+#include <iostream>
+using namespace::std;
 
 class Ejecutar{
 public:
@@ -25,8 +26,8 @@ private:
     void colocarParametros(Nodo *raiz);
     bool parametrosCorrectos(int comando);
     bool parametrosObligatorios(int comando);
-    QString obtenerFecha();
-    int obtenerFirma();
+    string obtenerFecha();
+    string obtenerFirma();
 
 };
 

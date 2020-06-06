@@ -20,7 +20,7 @@ struct Partition{
 
 struct MBR{
     int mbr_tamano;
-    QString mbr_fecha_creacion;
+    char mbr_fecha_creacion[32];
     int mbr_signature;
     char disk_fit;
     Partition mbr_partition[4];
@@ -38,30 +38,36 @@ void Ejecutar::ejecutar(Nodo *raiz){
 
 void Ejecutar::recorrer(Nodo *raiz){
     switch (raiz->tipo) {
-        case -1: //lista de comandos
-            for(int i = 0; i < raiz->hijos.length(); i++){
-                Nodo n = raiz->hijos.at(i);
-                recorrer(&n);
-            }
-            break;
-        case -2: //lista de parametros
-            for(int i = 0; i < raiz->hijos.length(); i++){
-                Nodo n = raiz->hijos.at(i);
-                recorrer(&n);
-            }
-            break;
-        case 0: //mkdisk
-            {
-                Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
-                this->mkdisk(&param);
-            }
-            break;
-        case 5: //rmdisk
-            {
-                Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
-                this->rmdisk(&param);
-            }
-            break;
+    case -1: //lista de comandos
+        for(int i = 0; i < raiz->hijos.length(); i++){
+            Nodo n = raiz->hijos.at(i);
+            recorrer(&n);
+        }
+        break;
+    case -2: //lista de parametros
+        for(int i = 0; i < raiz->hijos.length(); i++){
+            Nodo n = raiz->hijos.at(i);
+            recorrer(&n);
+        }
+        break;
+    case 0: //mkdisk
+        {
+            Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
+            this->mkdisk(&param);
+        }
+        break;
+    case 5: //rmdisk
+        {
+            Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
+            this->rmdisk(&param);
+        }
+        break;
+    case 6: //fdisk
+    {
+        Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
+        this->fdisk(&param);
+    }
+        break;
     }
 }
 
@@ -84,8 +90,8 @@ void Ejecutar::mkdisk(Nodo *raiz){
         }
 
         MBR mbr;
-        mbr.mbr_fecha_creacion = this->obtenerFecha();
-        mbr.mbr_signature = this->obtenerFirma();
+        strcpy(mbr.mbr_fecha_creacion,obtenerFecha().c_str());
+        mbr.mbr_signature = atoi(obtenerFirma().c_str());
         mbr.disk_fit = this->fit.toStdString()[0];
 
         int tamano = 0;
@@ -168,7 +174,7 @@ void Ejecutar::rmdisk(Nodo *raiz){
         colocarParametros(&p);
     }
 
-    if(parametrosObligatorios(2)){
+    if(parametrosObligatorios(8)){
         char comando[500];
         strcpy(comando, ("find " + this->path).toStdString().c_str());
         if(system(comando)) cout << "error: compruebe la ruta, el disco no existe" << endl;
@@ -185,32 +191,116 @@ void Ejecutar::rmdisk(Nodo *raiz){
     }
 }
 
+void Ejecutar::fdisk(Nodo *raiz){
+    this->limpiarVariables();
+    for(int i = 0; i < raiz->hijos.length(); i++){
+        Nodo p = raiz->hijos.at(i); //envio el nodo del parametro unitario (size, path, name, etc)
+        colocarParametros(&p);
+    }
+
+    int accionEjecutada = 0;
+
+    if(this->path != "" && this->nombre != ""){
+       char comando[500];
+       strcpy(comando,this->path.toStdString().c_str());
+       FILE* d1 = fopen(comando, "r+b");
+       QString path2 = this->path;
+       strcpy(comando,path2.replace(".disk", "_RAID.disk").toStdString().c_str());
+       FILE* d2 = fopen(comando, "r+b");
+       MBR mbr;
+       if(d1 != NULL && d2 != NULL){
+           fseek(d1,0,SEEK_SET);
+           fread(&mbr, sizeof (MBR), 1, d1);
+           int tamanoDisco = mbr.mbr_tamano - sizeof (MBR), primarias = 0, extendidas = 0;
+           for(int i = 0; i < 4; i++){
+               Partition particion = mbr.mbr_partition[i];
+               if(particion.part_type == 'P' || particion.part_type == 'p') primarias++;
+               else if(particion.part_type == 'E' || particion.part_type == 'e') extendidas++;
+           }
+           cout << "x ---------------------------- MBR --------------------------- x" << endl;
+           cout << "   Tamano del disco : " << mbr.mbr_tamano << " bytes" << endl;
+           cout << "   Fecha de creacion del disco : " << mbr.mbr_fecha_creacion << endl;
+           cout << "   Firma del disco : " << mbr.mbr_signature << endl;
+           cout << "   Ajuste del disco : " << mbr.disk_fit << endl;
+           cout << "   Particiones primarias : " << primarias << endl;
+           cout << "   Particiones Extendidas : " << extendidas << endl;
+           cout << "x ------------------------------------------------------------ x" << endl;
+
+           if(this->unit == "")this->unit = "K";
+           if(this->type == "")this->type = "P";
+           if(this->fit == "")this->fit = "WF";
+           Partition nueva;
+           if(this->size != "" && accionEjecutada == 0){ //crear particion
+                int tamano = this->size.toInt();
+                if(this->unit == "K")tamano*=1024;
+                else if(this->unit == "M")tamano*=(1024*1024);
+
+                if(tamano < tamanoDisco){
+                    if((primarias + extendidas) == 0){ // la primer particion
+                        if(this->type == "P" || this->type == "p" || this->type == "E" || this->type == "e"){ // primaria
+                            mbr.mbr_partition[0].part_status = 'A';
+                            mbr.mbr_partition[0].part_type = this->type.toStdString().c_str()[0];
+                            mbr.mbr_partition[0].part_fit = this->fit.toStdString().c_str()[0];
+                            mbr.mbr_partition[0].part_start = sizeof (MBR);
+                            mbr.mbr_partition[0].part_size = tamano;
+                            strcpy(mbr.mbr_partition[0].part_name,this->nombre.toStdString().c_str());
+                            nueva = mbr.mbr_partition[0];
+                            fseek(d1,nueva.part_start,SEEK_SET);
+                            fseek(d2,nueva.part_start,SEEK_SET);
+
+                            int fin=(tamano/1024);
+                            char buffer[1024];
+                            for(int i=0;i<1024;i++){
+                                buffer[i]='1';
+                            }
+                            int j=0;
+                            while(j!=fin){
+                                fwrite(&buffer,1024 , 1, d1);
+                                fwrite(&buffer, 1024, 1, d2);
+                                j++;
+                            }
+                        }else if(this->type == "L" || this->type == "l") cout << "error: no se pueden agregar particiones logicas sin una particion extendida" << endl;
+                        accionEjecutada = 1;
+                    }else if((primarias + extendidas) > 0 && (primarias + extendidas) < 4){ // ya hay una particion
+                        if(this->fit == "BF"){
+
+                        }
+                    }else cout << "error: no se pueden agregar mas particiones " << endl;
+                }else cout << "error: no se puede agregar espacio mas grande que el disco " << endl;
+
+           }if(this->add != "" && accionEjecutada == 0){ //modificar particion
+
+           }if(this->del != "" && accionEjecutada == 0){ // eliminar particion
+
+           }if(accionEjecutada == 0) cout << "error: se necesita el parametro 'size', 'add' o 'delete' para accionar" << endl;
+       }
+
+       fseek(d1,0,SEEK_SET);
+       fwrite(&mbr, sizeof(MBR), 1, d1);//escribe mbr2
+       fclose(d1);
+       fseek(d2,0,SEEK_SET);
+       fwrite(&mbr, sizeof(MBR), 1, d2);//escribe mbr2
+       fclose(d2);
+    }
+
+    if(accionEjecutada == 0) cout << "error: verificar parametros para 'fdisk'" << endl;
+}
+
 bool Ejecutar::parametrosObligatorios(int comando){
     if(this->parametrosCorrectos(comando))return true;
     else{
-        cout << "error: Verifique parametros, hacen falta algunos" << endl;
+        cout << "error: verifique parametros, hacen falta algunos" << endl;
         return false;
     }
 }
 
 bool Ejecutar::parametrosCorrectos(int comando){ //parametros obligatorios
-    switch (comando) {
-    case 1: //mkdisk
-        {if(this->size != "" && this->path != "")return true;}
-    case 2: //rmdisk
-        {if(this->path != "")return true;}
-    case 3: //fdisk
-        {if(this->size != "" && this->path != "" && this->nombre != "")return true;}
-    case 4: //mount
-        {if(this->path != "" && this->nombre != "") return true;}
-    case 5: //unmount
-        {if(this->id != "") return true;}
-    case 6: //rep
-        {if(this->nombre != "" && this->path != "" && this->id != "") return true;}
-    case 7: //exec
-        {if(this->path != "") return true;}
-    }
-    return false;
+    if(comando == 1 && this->size != "" && this->path != "")return true;
+    else if(comando == 8 && this->path != "")return true;
+    else if(comando == 4 && this->path != "" && this->nombre != "") return true;
+    else if(comando == 5 && this->id != "") return true;
+    else if(comando == 6 && this->nombre != "" && this->path != "" && this->id != "") return true;
+    else return false;
 }
 
 void Ejecutar::colocarParametros(Nodo *raiz){
@@ -267,6 +357,11 @@ void Ejecutar::colocarParametros(Nodo *raiz){
             {
                 if(raiz->hijos.at(0).tipo == 24 || raiz->hijos.at(0).tipo == 26) this->nombre = valor;
                 else cout << "error: Se espera un identificador o mbr/disk para 'name'" << endl;
+
+                if(this->nombre.length() > 16){
+                    this->nombre = "";
+                    cout << "error: el nombre de la particion no debe ser mayor a 16 caracteres" << endl;
+                }
             }
             break;
         case 13: // id
@@ -292,7 +387,7 @@ void Ejecutar::limpiarVariables(){
     this->id = "";
 }
 
-QString Ejecutar::obtenerFecha(){
+string Ejecutar::obtenerFecha(){
     time_t t = time(NULL);
     tm* timePtr = localtime(&t);
 
@@ -330,14 +425,10 @@ QString Ejecutar::obtenerFecha(){
     if(atoi(Sec.c_str()) < 10)
         Sec = "0"+Sec;
 
-    QString Fecha = "F " + QString::fromStdString(Day) +"/"+
-            QString::fromStdString(Month)+"/"+QString::fromStdString(Year)+
-            " H "+QString::fromStdString(Hour)+":"+QString::fromStdString(Min)+":"+QString::fromStdString(Sec);
-
-    return Fecha;
+    return "F " + Day +"/"+ Month+"/"+Year+" H "+Hour+":"+Min+":"+Sec;
 }
 
-int Ejecutar::obtenerFirma(){
+string Ejecutar::obtenerFirma(){
     time_t t = time(NULL);
     tm* timePtr = localtime(&t);
 
@@ -375,8 +466,6 @@ int Ejecutar::obtenerFirma(){
     if(atoi(Sec.c_str()) < 10)
         Sec = "0"+Sec;
 
-    QString Fecha = QString::fromStdString(Year)+QString::fromStdString(Month)+QString::fromStdString(Day)+
-            QString::fromStdString(Hour)+QString::fromStdString(Min)+QString::fromStdString(Sec);
-    int sign = Fecha.toInt();
-    return sign;
+    string Fecha = Month+Day+Year+Hour+Min+Sec;
+    return Fecha;
 }
