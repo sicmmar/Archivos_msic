@@ -2,6 +2,7 @@
 #define EJECUTAR_H
 
 #include "Analizador/Nodo.h"
+#include "Montar/Montar.h"
 #include <iostream>
 using namespace::std;
 
@@ -9,7 +10,8 @@ class Ejecutar{
 public:
     Nodo *raiz;
     Ejecutar();
-    void ejecutar(Nodo *raiz);
+    void ejecutar(Nodo *raiz, Montar *listaParticiones);
+    Montar *listaParticiones;
 
 private:
     void recorrer(Nodo *raiz);
@@ -19,7 +21,6 @@ private:
     void mount(Nodo *raiz);
     void unmount(Nodo *raiz);
     void rep(Nodo *raiz);
-    void exec(Nodo *raiz);
     QString size = "", fit = "", unit = "", path = "", type = "";
     QString del = "", nombre = "", add = "", id = "";
     void limpiarVariables();
@@ -28,7 +29,6 @@ private:
     bool parametrosObligatorios(int comando);
     string obtenerFecha();
     string obtenerFirma();
-
 };
 
 #endif // EJECUTAR_H

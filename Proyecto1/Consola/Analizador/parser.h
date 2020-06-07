@@ -73,16 +73,9 @@ extern int yydebug;
     rid = 274,                     /* rid  */
     rrep = 275,                    /* rrep  */
     rexec = 276,                   /* rexec  */
-    rbf = 277,                     /* rbf  */
-    rff = 278,                     /* rff  */
-    rwf = 279,                     /* rwf  */
-    rfull = 280,                   /* rfull  */
-    rfast = 281,                   /* rfast  */
-    rmbr = 282,                    /* rmbr  */
-    rdisk = 283,                   /* rdisk  */
-    numero = 284,                  /* numero  */
-    iden = 285,                    /* iden  */
-    cadena = 286                   /* cadena  */
+    numero = 277,                  /* numero  */
+    iden = 278,                    /* iden  */
+    cadena = 279                   /* cadena  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -97,7 +90,7 @@ union YYSTYPE
 char TEXT [256];
 class Nodo *nodito;
 
-#line 101 "parser.h"
+#line 94 "parser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

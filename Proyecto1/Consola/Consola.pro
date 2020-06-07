@@ -20,6 +20,9 @@ SOURCES += \
         Analizador/parser.cpp \
         Analizador/scanner.cpp \
         Ejecutar.cpp \
+        Montar/Disco.cpp \
+        Montar/Montar.cpp \
+        Montar/Particion.cpp \
         main.cpp
 
 # Default rules for deployment.
@@ -36,4 +39,7 @@ HEADERS += \
     Analizador/Nodo.h \
     Analizador/parser.h \
     Analizador/scanner.h \
-    Ejecutar.h
+    Ejecutar.h \
+    Montar/Disco.h \
+    Montar/Montar.h \
+    Montar/Particion.h

@@ -1,9 +1,21 @@
 #include "Ejecutar.h"
-#include "iostream"
+#include <iostream>
+#include <fstream>
 #include "time.h"
 #include "ctime"
 #include <stdlib.h>
 #include <sstream>
+#include "Montar/Particion.h"
+#include "Analizador/parser.h"
+#include "Analizador/scanner.h"
+#include "Analizador/Graficar.h"
+
+
+extern int yyparse(); //
+extern Nodo *raiz; // Raiz del arbol
+extern int linea; // Linea del token
+extern int columna; // Columna de los tokens
+extern int yylineno;
 
 using namespace::std;
 
@@ -31,7 +43,8 @@ Ejecutar::Ejecutar(){
 }
 
 
-void Ejecutar::ejecutar(Nodo *raiz){
+void Ejecutar::ejecutar(Nodo *raiz, Montar *lista){
+    this->listaParticiones = lista;
     this->raiz = raiz;
     this->recorrer(raiz);
 }
@@ -66,6 +79,24 @@ void Ejecutar::recorrer(Nodo *raiz){
     {
         Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
         this->fdisk(&param);
+    }
+        break;
+    case 11: //mount
+    {
+        Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
+        this->mount(&param);
+    }
+        break;
+    case 12: //unmount
+    {
+        Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
+        this->unmount(&param);
+    }
+        break;
+    case 14: //rep
+    {
+        Nodo param = raiz->hijos.at(0);
+        this->rep(&param);
     }
         break;
     }
@@ -109,7 +140,7 @@ void Ejecutar::mkdisk(Nodo *raiz){
                 strcpy(comando, ("cd " + direccion).toStdString().c_str());
                 if(system(comando)){ //error
                     strcpy(comando, ("mkdir " + direccion).toStdString().c_str());
-                    cout << " ::Creando directorio " << endl;
+                    cout << " ::Creando " << direccion.toStdString() << " como directorio " << endl;
                     system(comando);
                 }
                 i++;
@@ -262,8 +293,8 @@ void Ejecutar::fdisk(Nodo *raiz){
                         }else if(this->type == "L" || this->type == "l") cout << "error: no se pueden agregar particiones logicas sin una particion extendida" << endl;
                         accionEjecutada = 1;
                     }else if((primarias + extendidas) > 0 && (primarias + extendidas) < 4){ // ya hay una particion
-                        if(this->fit == "BF"){
-
+                        if(this->fit == "BF"){ // el mejor ajuste
+                            //if(mbr.mbr_partition[1])
                         }
                     }else cout << "error: no se pueden agregar mas particiones " << endl;
                 }else cout << "error: no se puede agregar espacio mas grande que el disco " << endl;
@@ -286,10 +317,112 @@ void Ejecutar::fdisk(Nodo *raiz){
     if(accionEjecutada == 0) cout << "error: verificar parametros para 'fdisk'" << endl;
 }
 
+void Ejecutar::rep(Nodo *raiz){
+    this->limpiarVariables();
+    for(int i = 0; i < raiz->hijos.length(); i++){
+        Nodo p = raiz->hijos.at(i); //envio el nodo del parametro unitario (size, path, name, etc)
+        colocarParametros(&p);
+    }
+
+    if(parametrosObligatorios(6)){
+        int posicionParticion = this->listaParticiones->buscarParticion("\0", "\0", this->id);
+        if(posicionParticion < 0) cout << "error: la particion " << this->id.toStdString() << " no esta montada" << endl;
+        else{
+            if(this->path.split(".")[1].toUpper() == "JPG" || this->path.split(".")[1].toUpper() == "JPEG" || this->path.split(".")[1].toUpper() == "PNG"){
+                MBR mbr;
+                char comando[500];
+                QStringList arr = this->path.split("/");
+                QString direccion = "";
+                int i = 1;
+                while (i < (arr.length()-1)){
+                    direccion+= "/" + arr[i];
+                    strcpy(comando, ("cd " + direccion).toStdString().c_str());
+                    if(system(comando)){ //error
+                        strcpy(comando, ("mkdir " + direccion).toStdString().c_str());
+                        cout << " ::Creando " << direccion.toStdString() << " como directorio " << endl;
+                        system(comando);
+                    }
+                    i++;
+                }
+
+                QString nombreimg = arr[arr.length()-1].split(".")[0];
+                QString extension = arr[arr.length()-1].split(".")[1];
+                QString texto = "digraph partition{\n";
+                QString pathDisco = this->listaParticiones->listaParticion.at(posicionParticion).path;
+                strcpy(comando, pathDisco.toStdString().c_str());
+                FILE* f1= fopen(comando, "r+b");
+                fseek(f1,0,SEEK_SET);// estableciendo puntero al inicio
+                if(f1 != NULL){
+                    fread(&mbr, sizeof (MBR), 1, f1);
+                    int tamanoDisco = mbr.mbr_tamano;
+                    if(this->nombre.toUpper() == "MBR"){
+
+                    }else if(this->nombre.toUpper() == "DISK"){
+                        int numNodo = 0;
+                        texto +="graph [nodesep=0.01, rankdir=\"LR\", label=\"" + pathDisco + "\"];\n";
+                        texto += "edge [color=white, arrowsize=.01, weight=.01, penwidth=.01];\n";
+                        texto += "node [shape=record, height=1.25];\n"
+                        cout << "size of MBR " << sizeof (MBR) << endl;
+                        texto += QString::number(numNodo) + " [label=\"MBR\\n0.00028%\", width=.01];\n";
+                        cout << texto.toStdString() << endl;
+
+                    }
+                }
+
+                fclose(f1);
+
+            }else cout << "error: la extension para la creacion del reporte es incorrecta " << endl;
+        }
+    }
+}
+
+void Ejecutar::mount(Nodo *raiz){
+    this->limpiarVariables();
+    for(int i = 0; i < raiz->hijos.length(); i++){
+        Nodo p = raiz->hijos.at(i); //envio el nodo del parametro unitario (size, path, name, etc)
+        colocarParametros(&p);
+    }
+
+    if(parametrosObligatorios(4)){
+        char comando[256];
+        strcpy(comando, this->path.toStdString().c_str());
+        MBR mbr;
+        FILE* d1 = fopen(comando, "r+b");
+        if(d1 != NULL){
+            fseek(d1,0,SEEK_SET);
+            fread(&mbr, sizeof (MBR), 1, d1);
+            bool encontrado = false;
+            int i = 0;
+            char nombre[16];
+            strcpy(nombre, this->nombre.toStdString().c_str());
+            while(i < 4 && !encontrado){
+                if(strcmp(nombre, mbr.mbr_partition[i].part_name) == 0){
+                    Particion part = Particion(this->path, this->nombre);
+                    this->listaParticiones->agregarParticion(part);
+                    encontrado = true;
+                }
+                i++;
+            }
+            if(!encontrado) cout << "error: la particion " << this->nombre.toStdString() << " no existe" << endl;
+        }else cout << "error: el disco solicitado no existe" << endl;
+        fclose(d1);
+    }
+}
+
+void Ejecutar::unmount(Nodo *raiz){
+    this->limpiarVariables();
+    for(int i = 0; i < raiz->hijos.length(); i++){
+        Nodo p = raiz->hijos.at(i); //envio el nodo del parametro unitario (size, path, name, etc)
+        colocarParametros(&p);
+    }
+
+    if(parametrosObligatorios(5))this->listaParticiones->quitarParticion(this->id);
+}
+
 bool Ejecutar::parametrosObligatorios(int comando){
     if(this->parametrosCorrectos(comando))return true;
     else{
-        cout << "error: verifique parametros, hacen falta algunos" << endl;
+        cout << "error: verifique parametros, hace(n) falta uno(s)" << endl;
         return false;
     }
 }
@@ -299,7 +432,13 @@ bool Ejecutar::parametrosCorrectos(int comando){ //parametros obligatorios
     else if(comando == 8 && this->path != "")return true;
     else if(comando == 4 && this->path != "" && this->nombre != "") return true;
     else if(comando == 5 && this->id != "") return true;
-    else if(comando == 6 && this->nombre != "" && this->path != "" && this->id != "") return true;
+    else if(comando == 6 && this->nombre != "" && this->path != "" && this->id != ""){
+        if(this->nombre.toUpper() == "MBR" || this->nombre.toUpper() == "DISK")return true;
+        else{
+            cout << "error: el reporte de " << this->nombre.toStdString() << " no existe" << endl;
+            return false;
+        }
+    }
     else return false;
 }
 

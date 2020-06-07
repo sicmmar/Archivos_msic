@@ -3,6 +3,7 @@
 #include "Analizador/parser.h"
 #include "Analizador/scanner.h"
 #include "Analizador/Graficar.h"
+#include "Montar/Montar.h"
 #include "Ejecutar.h"
 #include <QString>
 
@@ -14,6 +15,7 @@ extern int yylineno;
 
 using namespace::std;
 int salir = 1;
+Montar *listaParticiones = new Montar();
 
 int salida(){
     if(salir == 1){
@@ -27,10 +29,23 @@ int main()
 {
     while (salir == 1) {
         string texto;
-        cout << "Bienvenido, comience escribiendo un comando ... " << endl << "> ";
+        cout << "Bienvenido, comience escribiendo un comando ... " << endl << " ";
         getline(cin, texto);
         if(salida() == 1){
             QString entrada = QString::fromStdString(texto);
+            if(entrada.contains("exec")){
+                string path = entrada.replace("exec -path=", "").toStdString();
+                string linea;
+                entrada = "";
+                ifstream archivo(path);
+                if(archivo.is_open()){
+                    while (getline(archivo, linea)) {
+                        entrada += QString::fromStdString(linea) + "\n";
+                    }
+                    archivo.close();
+                }else cout << "error: el archivo " << path << " no existe" << endl;
+            }
+
             yy_scan_string(entrada.toUtf8().constData());
             linea = 0;
             columna = 0;
@@ -39,7 +54,8 @@ int main()
                 Graficar *graficar = new Graficar(raiz);
                 graficar->generarImagen();
                 Ejecutar *ejecutar = new Ejecutar();
-                ejecutar->ejecutar(raiz);
+                ejecutar->ejecutar(raiz, listaParticiones);
+                listaParticiones = ejecutar->listaParticiones;
             }
         }else return 0;
     }

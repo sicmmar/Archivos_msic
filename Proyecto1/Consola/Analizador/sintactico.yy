@@ -112,9 +112,10 @@ COMANDO: rmkdisk LPARAM
             $$ = new Nodo(@1.first_line, @1.first_column,15,"EXEC");
             $$->agregar(*$2);
         }
-        | error
+        | error LPARAM
         {
             $$ = new Nodo(@1.first_line, @1.first_column,-3,"ERROR");
+            $$->agregar(*$2);
         }
 ;
 
@@ -175,9 +176,10 @@ PARAMETRO : rsize igual DATO
             $$ = new Nodo(@1.first_line, @1.first_column,13,"ID");
             $$->agregar(*$3);
         }
-        | error
+        | error igual DATO
         {
             $$ = new Nodo(@1.first_line, @1.first_column,-3,"ERROR");
+            $$->agregar(*$3);
         }
 ;
 
