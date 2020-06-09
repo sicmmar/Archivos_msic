@@ -444,10 +444,10 @@ void Ejecutar::fdisk(Nodo *raiz){
                 bool listo = false, huboEspacio = false;
                 while(c < 4 && !listo){
                     if(strcmp(mbr.mbr_partition[c].part_name,this->nombre.toStdString().c_str()) == 0){
+                        tamano = agregar_quitar;
+                        if(this->unit.toUpper() == "K") tamano = agregar_quitar * 1024;
+                        else if(this->unit.toUpper() == "M") tamano = agregar_quitar * (1024 * 1024);
                         if(agregar_quitar > 0){ // se agrega mas espacio a una particion
-                            tamano = agregar_quitar;
-                            if(this->unit.toUpper() == "K") tamano = agregar_quitar * 1024;
-                            else if(this->unit.toUpper() == "M") tamano = agregar_quitar * (1024 * 1024);
                             if(c == 3){
                                 if((tamano + mbr.mbr_partition[c].part_size + mbr.mbr_partition[c].part_start) <= mbr.mbr_tamano){
                                     mbr.mbr_partition[c].part_size = mbr.mbr_partition[c].part_size + tamano;
@@ -539,7 +539,25 @@ void Ejecutar::fdisk(Nodo *raiz){
                                 }
                             }
                         }else if(agregar_quitar < 0){ // se remueve espacio a una particion
+                            if((tamano + mbr.mbr_partition[c].part_size) > 0){
+                                mbr.mbr_partition[c].part_size = mbr.mbr_partition[c].part_size + tamano;
+                                fseek(d1,mbr.mbr_partition[c].part_start,SEEK_SET);
+                                fseek(d2,mbr.mbr_partition[c].part_start,SEEK_SET);
+                                int fin=(mbr.mbr_partition[c].part_size/1024);
+                                char buffer[1024];
+                                for(int i=0;i<1024;i++){
+                                    buffer[i]='1';
+                                }
 
+                                int j = 0;
+                                while(j != fin){
+                                    fwrite(&buffer,1024 , 1, d1);
+                                    fwrite(&buffer, 1024, 1, d2);
+                                    j++;
+                                }
+                                accionEjecutada = 1;
+                                huboEspacio = 1;
+                            }
                         }
                         listo = true;
                     }
