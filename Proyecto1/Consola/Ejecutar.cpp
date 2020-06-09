@@ -440,7 +440,117 @@ void Ejecutar::fdisk(Nodo *raiz){
                    }else cout << "error: no se puede agregar espacio mas grande que el disco " << endl;
                }else cout << "error: la particion " << this->nombre.toStdString() << " ya existe" << endl;
            }if(this->add != "" && accionEjecutada == 0){ //modificar particion
+                int agregar_quitar = this->add.toInt(), c = 0, tamano = 0;
+                bool listo = false, huboEspacio = false;
+                while(c < 4 && !listo){
+                    if(strcmp(mbr.mbr_partition[c].part_name,this->nombre.toStdString().c_str()) == 0){
+                        if(agregar_quitar > 0){ // se agrega mas espacio a una particion
+                            tamano = agregar_quitar;
+                            if(this->unit.toUpper() == "K") tamano = agregar_quitar * 1024;
+                            else if(this->unit.toUpper() == "M") tamano = agregar_quitar * (1024 * 1024);
+                            if(c == 3){
+                                if((tamano + mbr.mbr_partition[c].part_size + mbr.mbr_partition[c].part_start) <= mbr.mbr_tamano){
+                                    mbr.mbr_partition[c].part_size = mbr.mbr_partition[c].part_size + tamano;
 
+                                    fseek(d1,mbr.mbr_partition[c].part_start,SEEK_SET);
+                                    fseek(d2,mbr.mbr_partition[c].part_start,SEEK_SET);
+                                    int fin=(mbr.mbr_partition[c].part_size/1024);
+                                    char buffer[1024];
+                                    for(int i=0;i<1024;i++){
+                                        buffer[i]='1';
+                                    }
+
+                                    int j = 0;
+                                    while(j != fin){
+                                        fwrite(&buffer,1024 , 1, d1);
+                                        fwrite(&buffer, 1024, 1, d2);
+                                        j++;
+                                    }
+                                    huboEspacio = true;
+                                }
+                            }else{
+                                if(mbr.mbr_partition[c+1].part_status == 'A'){
+                                    if((tamano + mbr.mbr_partition[c].part_size + mbr.mbr_partition[c].part_start) <= mbr.mbr_partition[c+1].part_start){
+                                        mbr.mbr_partition[c].part_size = mbr.mbr_partition[c].part_size + tamano;
+                                        fseek(d1,mbr.mbr_partition[c].part_start,SEEK_SET);
+                                        fseek(d2,mbr.mbr_partition[c].part_start,SEEK_SET);
+                                        int fin=(mbr.mbr_partition[c].part_size/1024);
+                                        char buffer[1024];
+                                        for(int i=0;i<1024;i++){
+                                            buffer[i]='1';
+                                        }
+
+                                        int j = 0;
+                                        while(j != fin){
+                                            fwrite(&buffer,1024 , 1, d1);
+                                            fwrite(&buffer, 1024, 1, d2);
+                                            j++;
+                                        }
+                                        huboEspacio = true;
+                                    }
+                                }else{
+                                    int h = c+1, ban = 0;
+                                    while(h < 4 && !ban){
+                                        if(h == 3){
+                                            if((tamano + mbr.mbr_partition[c].part_size + mbr.mbr_partition[c].part_start) <= mbr.mbr_tamano){
+                                                mbr.mbr_partition[c].part_size = mbr.mbr_partition[c].part_size + tamano;
+                                                fseek(d1,mbr.mbr_partition[c].part_start,SEEK_SET);
+                                                fseek(d2,mbr.mbr_partition[c].part_start,SEEK_SET);
+                                                int fin=(mbr.mbr_partition[c].part_size/1024);
+                                                char buffer[1024];
+                                                for(int i=0;i<1024;i++){
+                                                    buffer[i]='1';
+                                                }
+
+                                                int j = 0;
+                                                while(j != fin){
+                                                    fwrite(&buffer,1024 , 1, d1);
+                                                    fwrite(&buffer, 1024, 1, d2);
+                                                    j++;
+                                                }
+                                                huboEspacio = true;
+                                                ban = 1;
+                                            }
+                                        }else{
+                                            if(mbr.mbr_partition[h].part_status == 'A'){
+                                                if((tamano + mbr.mbr_partition[c].part_size + mbr.mbr_partition[c].part_start) <= mbr.mbr_partition[h].part_start){
+                                                    mbr.mbr_partition[c].part_size = mbr.mbr_partition[c].part_size + tamano;
+                                                    fseek(d1,mbr.mbr_partition[c].part_start,SEEK_SET);
+                                                    fseek(d2,mbr.mbr_partition[c].part_start,SEEK_SET);
+                                                    int fin=(mbr.mbr_partition[c].part_size/1024);
+                                                    char buffer[1024];
+                                                    for(int i=0;i<1024;i++){
+                                                        buffer[i]='1';
+                                                    }
+
+                                                    int j = 0;
+                                                    while(j != fin){
+                                                        fwrite(&buffer,1024 , 1, d1);
+                                                        fwrite(&buffer, 1024, 1, d2);
+                                                        j++;
+                                                    }
+                                                    huboEspacio = true;
+                                                    ban = 1;
+                                                }
+                                            }
+                                        }
+                                        h++;
+                                    }
+                                }
+                            }
+                        }else if(agregar_quitar < 0){ // se remueve espacio a una particion
+
+                        }
+                        listo = true;
+                    }
+                    c++;
+                }
+                if(!huboEspacio)cout << "error: ya no hay espacio para agregar / quitar en la particion " << this->nombre.toStdString() << endl;
+                else{
+                    accionEjecutada = 1;
+                    cout << " ::Se modifico la particion " << this->nombre.toStdString() << " exitosamente" << endl;
+                }
+                if(!listo)cout << "error: la particion " << this->nombre.toStdString() << " no existe" << endl;
            }if(this->del != "" && accionEjecutada == 0){ // eliminar particion
                 int g = 0;
                 bool eliminada = false;
@@ -565,12 +675,12 @@ void Ejecutar::rep(Nodo *raiz){
                         int numNodo = 0;
                         texto +="graph [nodesep=0.01, rankdir=\"LR\", label=\"" + pathDisco + "\"];\n";
                         texto += "edge [color=white, arrowsize=.01, weight=.01, penwidth=.01];\n";
-                        texto += "node [shape=record, height=1.25];\n";
-                        texto += QString::number(numNodo) + " [label=\"MBR\", width=.01];\n"; numNodo++;
+                        texto += "node [shape=record, height=1.25, style=filled];\n";
+                        texto += QString::number(numNodo) + " [color=greenyellow, label=\"MBR\", width=.01];\n"; numNodo++;
                         for(int k = 0; k < 4; k++){
                             if(mbr.mbr_partition[k].part_status == 'A'){
                                 double proporcion = (static_cast<double>(mbr.mbr_partition[k].part_size) / static_cast<double>(tamanoDisco)) * 100;
-                                texto += QString::number(numNodo) + " [label=\" "+ QString(mbr.mbr_partition[k].part_type) + "\\n";
+                                texto += QString::number(numNodo) + " [color=aquamarine2, label=\" "+ QString(mbr.mbr_partition[k].part_type) + "\\n";
                                 texto += "(" + QString::fromStdString(mbr.mbr_partition[k].part_name) + ")\\n" + QString::number(proporcion) + "%\", ";
                                 texto += "width=" + QString::number(proporcion*0.15) + "];\n" + QString::number(numNodo-1) + " -> " + QString::number(numNodo) + ";\n";
                                 numNodo++;
@@ -584,7 +694,7 @@ void Ejecutar::rep(Nodo *raiz){
                                         if(mbr.mbr_partition[y].part_status == 'A'){
                                             tamano = (mbr.mbr_partition[k].part_size + mbr.mbr_partition[k].part_start) - mbr.mbr_partition[y].part_start;
                                             double proporcion = (tamano / static_cast<double>(tamanoDisco)) * 100;
-                                            texto += QString::number(numNodo) + " [label=\" Espacio Libre\\n";
+                                            texto += QString::number(numNodo) + " [color=lightsteelblue1, label=\" Espacio Libre\\n";
                                             texto += QString::number(proporcion) + "%\", ";
                                             texto += "width=" + QString::number(proporcion*0.15) + "];\n" + QString::number(numNodo-1) + " -> " + QString::number(numNodo) + ";\n";
                                             numNodo++;
@@ -597,7 +707,7 @@ void Ejecutar::rep(Nodo *raiz){
                                         int diferencia = (( mbr.mbr_partition[k].part_start + mbr.mbr_partition[k].part_size) - tamanoDisco) * -1;
                                         if(diferencia > 1024){
                                             double proporcion = (diferencia / static_cast<double>(tamanoDisco)) * 100;
-                                            texto += QString::number(numNodo) + " [label=\" Espacio Libre\\n";
+                                            texto += QString::number(numNodo) + " [color=lightsteelblue1, label=\" Espacio Libre\\n";
                                             texto += QString::number(proporcion) + "%\", ";
                                             texto += "width=" + QString::number(proporcion*0.15) + "];\n" + QString::number(numNodo-1) + " -> " + QString::number(numNodo) + ";\n";
                                             numNodo++;
@@ -607,7 +717,7 @@ void Ejecutar::rep(Nodo *raiz){
                                     int diferencia = ( mbr.mbr_partition[k].part_start + mbr.mbr_partition[k].part_size) - mbr.mbr_partition[k + 1].part_start;
                                     if(diferencia > 1024){
                                         double proporcion = (diferencia / static_cast<double>(tamanoDisco)) * 100;
-                                        texto += QString::number(numNodo) + " [label=\" Espacio Libre\\n";
+                                        texto += QString::number(numNodo) + " [color=lightsteelblue1, label=\" Espacio Libre\\n";
                                         texto += QString::number(proporcion) + "%\", ";
                                         texto += "width=" + QString::number(proporcion*0.15) + "];\n" + QString::number(numNodo-1) + " -> " + QString::number(numNodo) + ";\n";
                                         numNodo++;
@@ -616,7 +726,7 @@ void Ejecutar::rep(Nodo *raiz){
 
                                     int tamano = mbr.mbr_partition[k+1].part_start - sizeof (MBR);
                                     double proporcion = (tamano / static_cast<double>(tamanoDisco)) * 100;
-                                    texto += QString::number(numNodo) + " [label=\" Espacio Libre\\n";
+                                    texto += QString::number(numNodo) + " [color=lightsteelblue1, label=\" Espacio Libre\\n";
                                     texto += QString::number(proporcion) + "%\", ";
                                     texto += "width=" + QString::number(proporcion*0.15) + "];\n" + QString::number(numNodo-1) + " -> " + QString::number(numNodo) + ";\n";
                                     numNodo++;
@@ -625,7 +735,7 @@ void Ejecutar::rep(Nodo *raiz){
                                 int diferencia = (( mbr.mbr_partition[k].part_start + mbr.mbr_partition[k].part_size) - tamanoDisco) * -1;
                                 if(diferencia > 1024){
                                     double proporcion = (diferencia / static_cast<double>(tamanoDisco)) * 100;
-                                    texto += QString::number(numNodo) + " [label=\" Espacio Libre\\n";
+                                    texto += QString::number(numNodo) + " [color=lightsteelblue1, label=\" Espacio Libre\\n";
                                     texto += QString::number(proporcion) + "%\", ";
                                     texto += "width=" + QString::number(proporcion*0.15) + "];\n" + QString::number(numNodo-1) + " -> " + QString::number(numNodo) + ";\n";
                                     numNodo++;
@@ -634,16 +744,16 @@ void Ejecutar::rep(Nodo *raiz){
                         }
                         texto += "}";
                     }
-                }
-                fclose(f1);
-                ofstream archivo;
-                archivo.open(direccion.toStdString() + "/" + nombreimg.toStdString() + ".dot");
-                archivo << texto.toStdString() << endl;
-                archivo.close();
 
-                QString cmd = "cd " + direccion + " && dot -T" + extension + " " + nombreimg + ".dot -o " + nombreimg + "." + extension;
-                strcpy(comando,cmd.toStdString().c_str());
-                system(comando);
+                    ofstream archivo;
+                    archivo.open(direccion.toStdString() + "/" + nombreimg.toStdString() + ".dot");
+                    archivo << texto.toStdString() << endl;
+                    archivo.close();
+
+                    QString cmd = "cd " + direccion + " && dot -T" + extension + " " + nombreimg + ".dot -o " + nombreimg + "." + extension;
+                    strcpy(comando,cmd.toStdString().c_str());
+                    system(comando);
+                }else cout << "error: el disco no existe" << endl;
 
             }else cout << "error: la extension para la creacion del reporte es incorrecta " << endl;
         }
