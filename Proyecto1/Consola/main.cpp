@@ -51,13 +51,12 @@ int main()
             columna = 0;
             yylineno = 0;
             if(yyparse()==0){
-                Graficar *graficar = new Graficar(raiz);
-                graficar->generarImagen();
                 Ejecutar *ejecutar = new Ejecutar();
                 ejecutar->ejecutar(raiz, listaParticiones);
                 listaParticiones = ejecutar->listaParticiones;
             }
         }else return 0;
     }
+
     return 0;
 }
