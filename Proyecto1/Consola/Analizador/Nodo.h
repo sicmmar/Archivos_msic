@@ -6,7 +6,8 @@
 
 class Nodo{
 public:
-    Nodo(int linea, int columna, int tipo, QString valor);
+    Nodo(int linea, int columna, int tipo);
+    Nodo(int linea, int columna, int tipo, QString v);
     void agregar(Nodo nodo);
     int linea;
     int columna;

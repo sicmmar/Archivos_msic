@@ -21,6 +21,7 @@ private:
     void mount(Nodo *raiz);
     void unmount(Nodo *raiz);
     void rep(Nodo *raiz);
+    void pause();
     int size = 0;
     QString fit = "", unit = "", path = "", type = "";
     QString del = "", nombre = "", add = "", id = "";

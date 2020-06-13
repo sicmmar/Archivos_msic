@@ -99,6 +99,10 @@ void Ejecutar::recorrer(Nodo *raiz){
         this->rep(&param);
     }
         break;
+    case 49: //pause
+    {
+        this->pause();
+    }
     }
 }
 
@@ -467,6 +471,7 @@ void Ejecutar::fdisk(Nodo *raiz){
                                         j++;
                                     }
                                     huboEspacio = true;
+                                    listo = true;
                                 }
                             }else{
                                 if(mbr.mbr_partition[c+1].part_status == 'A'){
@@ -487,6 +492,7 @@ void Ejecutar::fdisk(Nodo *raiz){
                                             j++;
                                         }
                                         huboEspacio = true;
+                                        listo = true;
                                     }
                                 }else{
                                     int h = c+1, ban = 0;
@@ -509,6 +515,7 @@ void Ejecutar::fdisk(Nodo *raiz){
                                                     j++;
                                                 }
                                                 huboEspacio = true;
+                                                listo = true;
                                                 ban = 1;
                                             }
                                         }else{
@@ -531,6 +538,7 @@ void Ejecutar::fdisk(Nodo *raiz){
                                                     }
                                                     huboEspacio = true;
                                                     ban = 1;
+                                                    listo = true;
                                                 }
                                             }
                                         }
@@ -557,9 +565,9 @@ void Ejecutar::fdisk(Nodo *raiz){
                                 }
                                 accionEjecutada = 1;
                                 huboEspacio = 1;
+                                listo = true;
                             }
                         }
-                        listo = true;
                     }
                     c++;
                 }
@@ -819,6 +827,12 @@ void Ejecutar::unmount(Nodo *raiz){
     }
 
     if(parametrosObligatorios(5))this->listaParticiones->quitarParticion(this->id);
+}
+
+void Ejecutar::pause(){
+    string respuesta;
+    cout << " ::Presione cualquier tecla para continuar " ;
+    getline(cin, respuesta);
 }
 
 bool Ejecutar::parametrosObligatorios(int comando){

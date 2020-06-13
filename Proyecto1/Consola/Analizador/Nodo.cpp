@@ -9,6 +9,14 @@ Nodo::Nodo(int l, int c, int t, QString v){
     hijos = QList<Nodo>();
 }
 
+Nodo::Nodo(int l, int c, int t){
+    linea = l;
+    columna = c;
+    tipo = t;
+    valor = "";
+    hijos = QList<Nodo>();
+}
+
 void Nodo::agregar(Nodo nd){
     this->hijos.append(nd);
 }

@@ -73,9 +73,42 @@ extern int yydebug;
     rid = 274,                     /* rid  */
     rrep = 275,                    /* rrep  */
     rexec = 276,                   /* rexec  */
-    numero = 277,                  /* numero  */
-    iden = 278,                    /* iden  */
-    cadena = 279                   /* cadena  */
+    rmkfs = 277,                   /* rmkfs  */
+    rlogin = 278,                  /* rlogin  */
+    rusr = 279,                    /* rusr  */
+    rpwd = 280,                    /* rpwd  */
+    rlogout = 281,                 /* rlogout  */
+    rmkgrp = 282,                  /* rmkgrp  */
+    rrmgrp = 283,                  /* rrmgrp  */
+    rmkusr = 284,                  /* rmkusr  */
+    rgrp = 285,                    /* rgrp  */
+    rrmusr = 286,                  /* rrmusr  */
+    rchmod = 287,                  /* rchmod  */
+    rugo = 288,                    /* rugo  */
+    rmkfile = 289,                 /* rmkfile  */
+    rcont = 290,                   /* rcont  */
+    rcat = 291,                    /* rcat  */
+    rfile = 292,                   /* rfile  */
+    rrem = 293,                    /* rrem  */
+    redit = 294,                   /* redit  */
+    rren = 295,                    /* rren  */
+    rmkdir = 296,                  /* rmkdir  */
+    rcp = 297,                     /* rcp  */
+    rdest = 298,                   /* rdest  */
+    rmv = 299,                     /* rmv  */
+    rchown = 300,                  /* rchown  */
+    rchgrp = 301,                  /* rchgrp  */
+    rpause = 302,                  /* rpause  */
+    rruta = 303,                   /* rruta  */
+    rfind = 304,                   /* rfind  */
+    rr = 305,                      /* rr  */
+    rp = 306,                      /* rp  */
+    numero = 307,                  /* numero  */
+    iden = 308,                    /* iden  */
+    cadena = 309,                  /* cadena  */
+    permisos = 310,                /* permisos  */
+    nombre = 311,                  /* nombre  */
+    rutaRaiz = 312                 /* rutaRaiz  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -90,7 +123,7 @@ union YYSTYPE
 char TEXT [256];
 class Nodo *nodito;
 
-#line 94 "parser.h"
+#line 127 "parser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
