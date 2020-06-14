@@ -21,14 +21,6 @@ using namespace::std;
 
 
 //struct
-struct Partition{
-    char part_status;
-    char part_type;
-    char part_fit;
-    int part_start;
-    int part_size;
-    char part_name[16];
-};
 
 struct MBR{
     int mbr_tamano;
@@ -38,10 +30,63 @@ struct MBR{
     Partition mbr_partition[4];
 };
 
+struct SuperBlock{
+    int s_filesystem_type;
+    int s_inodes_count;
+    int s_blocks_count;
+    int s_free_block_count;
+    int s_free_inodes_count;
+    char s_mtime[32];
+    char s_umtime[32];
+    int s_mnt_count;
+    int s_magic;
+    int s_inode_size;
+    int s_block_size;
+    int s_first_ino;
+    int s_first_blo;
+    int s_bm_inode_start;
+    int s_bm_block_start;
+    int s_inode_start;
+    int s_block_start;
+};
+
+struct Inode{
+    int i_uid;
+    int i_gid;
+    int i_size;
+    char i_atime[32];
+    char i_mtime[32];
+    int i_block;
+    int i_type;
+    int i_perm;
+};
+
+struct Content{
+    char b_name[12];
+    int b_inode;
+};
+
+struct Bloque_Carpeta{
+    Content b_content[4];
+};
+
+struct Bloque_Archivo{
+    char b_content[64];
+};
+
+struct Bloque_Apuntador{
+    int b_pointers[16];
+};
+
+struct Journal{
+    char j_fecha_hora[32];
+    char j_user[12];
+    char j_operation[256];
+};
+
 Ejecutar::Ejecutar(){
     this->raiz = NULL;
 }
-
 
 void Ejecutar::ejecutar(Nodo *raiz, Montar *lista){
     this->listaParticiones = lista;
@@ -102,6 +147,16 @@ void Ejecutar::recorrer(Nodo *raiz){
     case 49: //pause
     {
         this->pause();
+    }
+        break;
+    case 63: // parametro r
+    {
+        this->R = true;
+    }
+        break;
+    case 64: // parametro p
+    {
+        this->P = true;
     }
     }
 }
@@ -807,7 +862,7 @@ void Ejecutar::mount(Nodo *raiz){
             strcpy(nombre, this->nombre.toStdString().c_str());
             while(i < 4 && !encontrado){
                 if(strcmp(nombre, mbr.mbr_partition[i].part_name) == 0){
-                    Particion part = Particion(this->path, this->nombre);
+                    Particion part = Particion(this->path, this->nombre, mbr.mbr_partition[i]);
                     this->listaParticiones->agregarParticion(part);
                     encontrado = true;
                 }
@@ -826,7 +881,7 @@ void Ejecutar::unmount(Nodo *raiz){
         colocarParametros(&p);
     }
 
-    if(parametrosObligatorios(5))this->listaParticiones->quitarParticion(this->id);
+    if(parametrosObligatorios(9))this->listaParticiones->quitarParticion(this->id);
 }
 
 void Ejecutar::pause(){
@@ -847,11 +902,30 @@ bool Ejecutar::parametrosCorrectos(int comando){ //parametros obligatorios
     if(comando == 1 && this->size != 0 && this->path != "")return true;
     else if(comando == 8 && this->path != "")return true;
     else if(comando == 4 && this->path != "" && this->nombre != "") return true;
-    else if(comando == 5 && this->id != "") return true;
     else if(comando == 6 && this->nombre != "" && this->path != "" && this->id != ""){
-        if(this->nombre.toUpper() == "MBR" || this->nombre.toUpper() == "DISK")return true;
+        if(reporteValido(this->nombre.toUpper()))return true;
         else cout << "error: el reporte de " << this->nombre.toStdString() << " no existe" << endl;
     }
+    else if(comando == 9 && this->id != "") return true;
+    else if(comando == 10 && this->usr != "" && this->pwd != "" && this->id != "")return true;
+    else if(comando == 11 && this->nombre != "")return true;
+    else if(comando == 12 && this->usr != "" && this->pwd != "" && this->grp != "")return true;
+    else if(comando == 13 && this->usr != "")return true;
+    else if(comando == 14 && this->path != "" && this->ugo != "")return true;
+    else if(comando == 15 && this->fileParam != "")return true;
+    else if(comando == 16 && this->path != "" && this->cont != "")return true;
+    else if(comando == 17 && this->path != "" && this->dest != "")return true;
+    else if(comando == 18 && this->usr != "" && this->path != "")return true;
+    else if(comando == 19 && this->usr != "" && this->grp != "")return true;
+    return false;
+}
+
+bool Ejecutar::reporteValido(QString nombre){
+    QStringList lista = {"MBR", "DISK", "INODE", "JOURNALING", "BLOCK", "BM_INODE", "BM_BLOCK", "TREE", "SB", "FILE", "LS"};
+    for(int i = 0; i < lista.length(); i++){
+        if(nombre == lista.at(i))return true;
+    }
+
     return false;
 }
 
@@ -883,7 +957,7 @@ void Ejecutar::colocarParametros(Nodo *raiz){
             break;
         case 4: // path
             {
-                if(valor.contains('/') && valor.contains('.')) this->path = valor;
+                if(valor.contains('/') || valor.contains('.')) this->path = valor;
                 else cout << "error: Verificar el directorio " << valor.toStdString() << endl;
             }
             break;
@@ -919,8 +993,62 @@ void Ejecutar::colocarParametros(Nodo *raiz){
         case 13: // id
             {
                 if(raiz->hijos.at(0).tipo == 24 || raiz->hijos.at(0).tipo == 26) this->id = valor;
-                else cout << "error: Se espera un identificador para 'id'" << endl;
+                else cout << "error: se espera un identificador para 'id'" << endl;
             }
+            break;
+        case 55: //usr
+        {
+            if(valor.length() <= 10){
+                if(raiz->hijos.at(0).tipo == 24 || raiz->hijos.at(0).tipo == 26) this->usr = valor;
+                else cout << "error: se espera un identificador para 'usr'" << endl;
+            }else cout << "error: el tamano del nombre del usuario no puede ser mayor a diez" << endl;
+        }
+            break;
+        case 56: //pwd
+        {
+            if(valor.length() <= 10){
+                if(raiz->hijos.at(0).tipo == 24 || raiz->hijos.at(0).tipo == 26) this->usr = valor;
+                else cout << "error: se espera un identificador para 'pwd'" << endl;
+            }else cout << "error: el tamano de la contrasena no puede ser mayor a diez" << endl;
+        }
+            break;
+        case 57: //grp
+        {
+            if(valor.length() <= 10){
+                if(raiz->hijos.at(0).tipo == 24 || raiz->hijos.at(0).tipo == 26) this->usr = valor;
+                else cout << "error: se espera un identificador para 'grp'" << endl;
+            }else cout << "error: el tamano del nombre del grupo no puede ser mayor a diez" << endl;
+        }
+            break;
+        case 58: // ugo
+        {
+            if(raiz->hijos.at(0).tipo == 53) this->ugo = valor;
+            else cout << "error: valor invalido para 'ugo'" << endl;
+        }
+            break;
+        case 59: //cont
+        {
+            if(valor.contains('/') || valor.contains('.')) this->path = valor;
+            else cout << "error: Verificar el directorio " << valor.toStdString() << endl;
+        }
+            break;
+        case 60: // file
+        {
+            if(valor.contains('/') || valor.contains('.')) this->path = valor;
+            else cout << "error: Verificar el directorio " << valor.toStdString() << endl;
+        }
+            break;
+        case 61: // dest
+        {
+            if(valor.contains('/') || valor.contains('.')) this->path = valor;
+            else cout << "error: Verificar el directorio " << valor.toStdString() << endl;
+        }
+            break;
+        case 62: // ruta
+        {
+            if(valor.contains('/') || valor.contains('.')) this->path = valor;
+            else cout << "error: Verificar el directorio " << valor.toStdString() << endl;
+        }
             break;
         default:
             cout << "error: Parametro desconocido " << endl;
@@ -937,6 +1065,15 @@ void Ejecutar::limpiarVariables(){
     this->del = "";
     this->add = "";
     this->id = "";
+    this->usr = "";
+    this->pwd = "";
+    this->grp = "";
+    this->ugo = "";
+    this->R = false;
+    this->P = false;
+    this->cont = "";
+    this->dest = "";
+    this->ruta = "";
 }
 
 string Ejecutar::obtenerFecha(){

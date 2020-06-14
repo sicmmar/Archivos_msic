@@ -2,7 +2,8 @@
 #include "QString"
 #include <string>
 
-Particion::Particion(QString path, QString nombre){
+Particion::Particion(QString path, QString nombre, Partition part){
     this->name = nombre;
     this->path = path;
+    this->particion = part;
 }
