@@ -2,6 +2,9 @@
 #define PARTICION_H
 
 #include <QString>
+#include <stdlib.h>
+
+using namespace::std;
 
 struct Partition{
     char part_status;
@@ -15,10 +18,12 @@ struct Partition{
 class Particion{
 public:
     Particion(QString path, QString nombre, Partition particion);
+    Particion();
     QString path;
     QString iden;
     QString name;
     Partition particion;
+    string Fecha;
     char disco;
 
 };

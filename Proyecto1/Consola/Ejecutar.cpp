@@ -3,6 +3,7 @@
 #include <fstream>
 #include "time.h"
 #include "ctime"
+#include <cmath>
 #include <stdlib.h>
 #include <sstream>
 #include "Montar/Particion.h"
@@ -48,6 +49,7 @@ struct SuperBlock{
     int s_bm_block_start;
     int s_inode_start;
     int s_block_start;
+    int s_journal_count;
 };
 
 struct Inode{
@@ -87,6 +89,12 @@ struct Journal{
 Ejecutar::Ejecutar(){
     this->raiz = NULL;
 }
+
+const int magic_number = 0xEF53;
+const int inode_size = sizeof (Inode);
+const int block_size = 64;
+const char unUno = '1';
+const char unCero = '0';
 
 void Ejecutar::ejecutar(Nodo *raiz, Montar *lista){
     this->listaParticiones = lista;
@@ -158,6 +166,13 @@ void Ejecutar::recorrer(Nodo *raiz){
     {
         this->P = true;
     }
+        break;
+    case 31: //mkfs
+    {
+        Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
+        this->mkfs(&param);
+    }
+        break;
     }
 }
 
@@ -725,9 +740,11 @@ void Ejecutar::rep(Nodo *raiz){
                 QString extension = arr[arr.length()-1].split(".")[1];
                 QString texto = "digraph reporte{\n";
                 QString pathDisco = this->listaParticiones->listaParticion.at(posicionParticion).path;
+                Partition particion = this->listaParticiones->listaParticion.at(posicionParticion).particion;
                 strcpy(comando, pathDisco.toStdString().c_str());
                 FILE* f1= fopen(comando, "r+b");
                 fseek(f1,0,SEEK_SET);// estableciendo puntero al inicio
+                bool esunDot = true;
                 if(f1 != 0){
                     fread(&mbr, sizeof (MBR), 1, f1);
                     int tamanoDisco = mbr.mbr_tamano;
@@ -825,15 +842,96 @@ void Ejecutar::rep(Nodo *raiz){
                         }
                         texto += "}";
                     }
+                    else if(this->nombre.toUpper() == "INODE"){
+
+                    }else if(this->nombre.toUpper() == "JOURNALING"){
+                        texto += "label = \"" + this->id + "\";\nnode [shape=box];\nb  [label=<" +
+                                "<TABLE cellspacing=\"10\" cellpadding=\"10\">\n<TR><TD colspan=\"3\" bgcolor=\"darkolivegreen3\">" +
+                                "JOURNALING</TD></TR>\n<TR><TD>Fecha y Hora</TD><TD>Usuario</TD><TD>Operacion</TD></TR>";
+                        fseek(f1,particion.part_start,SEEK_SET);
+                        SuperBlock sb;
+                        fread(&sb,sizeof (sb),1,f1);
+                        int j = 0, cantJournal = sb.s_journal_count;
+                        fseek(f1,(particion.part_start + sizeof (SuperBlock)),SEEK_SET);
+                        while (j != cantJournal){
+                            Journal journal;
+                            fread(&journal,sizeof (Journal),1,f1);
+                            texto += "<TR><TD>" + QString::fromStdString(journal.j_fecha_hora) + "</TD><TD>" +
+                                    QString::fromStdString(journal.j_user) + "</TD><TD>" +
+                                    QString::fromStdString(journal.j_operation) + "</TD></TR>\n";
+                            j++;
+                        }
+                        texto += "</TABLE>>];\n}";
+                    }else if(this->nombre.toUpper() == "BLOCK"){
+
+                    }else if(this->nombre.toUpper() == "BM_INODE"){
+                        esunDot = false;
+                        texto = "";
+                        fseek(f1,particion.part_start,SEEK_SET);
+                        SuperBlock sb;
+                        fread(&sb,sizeof (sb),1,f1);
+                        fseek(f1,(particion.part_start + sizeof (SuperBlock) + (sb.s_inodes_count * sizeof (Journal))),SEEK_SET);
+                        int fin=sb.s_inodes_count/20, j = 0;
+                        char lectura[20];
+                        while(j != fin){
+                            fread(&lectura,20,1,f1);
+                            string l(lectura);
+                            texto += QString::fromStdString(l) + "\n";
+                            j++;
+                        }
+
+                    }else if(this->nombre.toUpper() == "BM_BLOCK"){
+
+                    }else if(this->nombre.toUpper() == "TREE"){
+
+                    }else if(this->nombre.toUpper() == "SB"){
+                        texto += "label = \"" + this->id + "\";\nnode [shape=box];\nb  [label=<" +
+                                "<TABLE cellspacing=\"10\" cellpadding=\"10\">\n<TR><TD colspan=\"2\" bgcolor=\"darkolivegreen3\">" +
+                                "SUPER BLOQUE</TD></TR>\n";
+                        SuperBlock SB;
+                        fseek(f1,particion.part_start,SEEK_SET);
+                        fread(&SB,sizeof (SuperBlock),1,f1);
+                        texto += "<TR><TD>s_filesystem_type</TD><TD>3</TD></TR>\n";
+                        texto += "<TR><TD>s_inodes_count</TD><TD>" + QString::number(SB.s_inodes_count) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_blocks_count</TD><TD>" + QString::number(SB.s_blocks_count) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_free_inodes_count</TD><TD>" + QString::number(SB.s_free_inodes_count) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_free_block_count</TD><TD>" + QString::number(SB.s_free_block_count) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_mtime</TD><TD>" + QString::fromStdString(SB.s_mtime) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_umtime</TD><TD>" + QString::fromStdString(SB.s_umtime) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_mnt_count</TD><TD>" + QString::number(SB.s_mnt_count) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_magic</TD><TD>0xEF53</TD></TR>\n";
+                        texto += "<TR><TD>s_bm_inode_start</TD><TD>" + QString::number(SB.s_bm_inode_start) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_bm_block_start</TD><TD>" + QString::number(SB.s_bm_block_start) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_inode_start</TD><TD>" + QString::number(SB.s_inode_start) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_block_start</TD><TD>" + QString::number(SB.s_block_start) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_inode_size</TD><TD>" + QString::number(SB.s_inode_size) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_block_size</TD><TD>" + QString::number(SB.s_block_size) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_first_ino</TD><TD>" + QString::number(SB.s_first_ino) + "</TD></TR>\n";
+                        texto += "<TR><TD>s_first_blo</TD><TD>" + QString::number(SB.s_first_blo) + "</TD></TR>\n";
+                        texto += "</TABLE>>];\n}";
+                    }else if(this->nombre.toUpper() == "FILE"){
+
+                    }else if(this->nombre.toUpper() == "LS"){
+
+                    }
+
+
+                    fclose(f1);
 
                     ofstream archivo;
-                    archivo.open(direccion.toStdString() + "/" + nombreimg.toStdString() + ".dot");
-                    archivo << texto.toStdString() << endl;
-                    archivo.close();
+                    if(esunDot){
+                        archivo.open(direccion.toStdString() + "/" + nombreimg.toStdString() + ".dot");
+                        archivo << texto.toStdString() << endl;
+                        archivo.close();
 
-                    QString cmd = "cd " + direccion + " && dot -T" + extension + " " + nombreimg + ".dot -o " + nombreimg + "." + extension;
-                    strcpy(comando,cmd.toStdString().c_str());
-                    system(comando);
+                        QString cmd = "cd " + direccion + " && dot -T" + extension + " " + nombreimg + ".dot -o " + nombreimg + "." + extension;
+                        strcpy(comando,cmd.toStdString().c_str());
+                        system(comando);
+                    }else{
+                        archivo.open(direccion.toStdString() + "/" + nombreimg.toStdString() + ".txt");
+                        archivo << texto.toStdString() << endl;
+                        archivo.close();
+                    }
                 }else cout << "error: el disco no existe" << endl;
 
             }else cout << "error: la extension para la creacion del reporte es incorrecta " << endl;
@@ -863,6 +961,7 @@ void Ejecutar::mount(Nodo *raiz){
             while(i < 4 && !encontrado){
                 if(strcmp(nombre, mbr.mbr_partition[i].part_name) == 0){
                     Particion part = Particion(this->path, this->nombre, mbr.mbr_partition[i]);
+                    part.Fecha = obtenerFecha();
                     this->listaParticiones->agregarParticion(part);
                     encontrado = true;
                 }
@@ -881,7 +980,140 @@ void Ejecutar::unmount(Nodo *raiz){
         colocarParametros(&p);
     }
 
-    if(parametrosObligatorios(9))this->listaParticiones->quitarParticion(this->id);
+    if(parametrosObligatorios(9))this->listaParticiones->quitarParticion(this->id,obtenerFecha());
+}
+
+void Ejecutar::mkfs(Nodo *raiz){
+    this->limpiarVariables();
+    for(int i = 0; i < raiz->hijos.length(); i++){
+        Nodo p = raiz->hijos.at(i); //envio el nodo del parametro unitario (size, path, name, etc)
+        colocarParametros(&p);
+    }
+
+    if(parametrosObligatorios(9)){
+        Particion particion = this->listaParticiones->devolverParticion(this->id);
+        if(particion.name == "NULL")cout << "error: la particion " << this->id.toStdString() << " no esta montada" << endl;
+        else{
+            char char256[256];
+            strcpy(char256,particion.path.toStdString().c_str());
+            FILE* disco = fopen(char256,"r+b");
+            if(disco != 0){
+                fseek(disco,particion.particion.part_start,SEEK_SET);
+                int fin=(particion.particion.part_size/1024);
+                char buffer[1024];
+                int i=0;
+                for(i=0;i<1024;i++){
+                    buffer[i]='0';
+                }
+
+                int j = 0;
+                while(j != fin){
+                    fwrite(&buffer,1024 , 1, disco);
+                    j++;
+                }
+
+                //calculo el numero de bloques
+                const double n = (particion.particion.part_size - sizeof (SuperBlock)) / (sizeof (Journal) + 4 + inode_size + (3 * 64));
+                const int numero_bloques = floor(n);
+
+                SuperBlock SB;
+                SB.s_filesystem_type = 3;
+                SB.s_inodes_count = numero_bloques;
+                SB.s_blocks_count = 3 * numero_bloques;
+                SB.s_free_block_count = (3 * numero_bloques) - 2;
+                SB.s_free_inodes_count = numero_bloques - 2;
+                strcpy(SB.s_mtime,particion.Fecha.c_str());
+                strcpy(SB.s_umtime,this->listaParticiones->fechaUnmount.c_str());
+                SB.s_inode_start = particion.particion.part_start + sizeof (SuperBlock) + (numero_bloques * sizeof (Journal)) + numero_bloques + (3 * numero_bloques);
+                SB.s_block_start = SB.s_inode_start + (numero_bloques * inode_size);
+                SB.s_magic = magic_number;
+                SB.s_inode_size = inode_size;
+                SB.s_block_size = block_size;
+                SB.s_first_ino = SB.s_inode_start + (2 * inode_size);
+                SB.s_first_blo = SB.s_block_start + (2 * block_size);
+                SB.s_bm_inode_start = particion.particion.part_start + sizeof (SuperBlock) + (numero_bloques * sizeof (Journal));
+                SB.s_bm_block_start = SB.s_bm_inode_start + numero_bloques;
+                SB.s_journal_count = 3;
+
+                Journal primerJournal;
+                strcpy(primerJournal.j_user,"root");
+                strcpy(primerJournal.j_fecha_hora,obtenerFecha().c_str());
+                string primerOperacion = "mkfs -id=" + this->id.toStdString();
+                if(this->type != "")primerOperacion += " -type=" + this->type.toStdString();
+                strcpy(primerJournal.j_operation,primerOperacion.c_str());
+                fseek(disco,(particion.particion.part_start + sizeof (SuperBlock)),SEEK_SET);
+                fwrite(&primerJournal,sizeof (Journal),1,disco);
+
+
+                //escribir el super bloque al inicio de la particion
+                fseek(disco,particion.particion.part_start,SEEK_SET);
+                fwrite(&SB,sizeof (SuperBlock),1,disco);
+
+                //archivo users.txt
+                string contenido = "1,G,root\n1,U,root,root,123\n";
+                //marcar los primeros bitmap
+                fseek(disco,SB.s_bm_inode_start,SEEK_SET);
+                fwrite(&unUno,1,1,disco);
+                fseek(disco,SB.s_bm_block_start,SEEK_SET);
+                fwrite(&unUno,1,1,disco);
+                fseek(disco,SB.s_bm_inode_start + 1,SEEK_SET);
+                fwrite(&unUno,1,1,disco);
+                fseek(disco,SB.s_bm_block_start + 1,SEEK_SET);
+                fwrite(&unUno,1,1,disco);
+                //primer inodo y primer bloque de archivos para /
+                Inode inodo;
+                inodo.i_uid = 1;
+                inodo.i_gid = 1;
+                inodo.i_size = 0;
+                strcpy(inodo.i_atime,obtenerFecha().c_str());
+                strcpy(inodo.i_mtime,obtenerFecha().c_str());
+                inodo.i_block = 0;
+                inodo.i_type = 1;
+                inodo.i_perm = 777;
+                fseek(disco,SB.s_inode_start,SEEK_SET);
+                fwrite(&inodo,sizeof (Inode),1,disco);
+                Bloque_Carpeta bloque;
+                strcpy(bloque.b_content[0].b_name,"/");
+                bloque.b_content[0].b_inode = 1;
+                fseek(disco,SB.s_block_start,SEEK_SET);
+                fwrite(&bloque,64,1,disco);
+
+                strcpy(primerJournal.j_fecha_hora,obtenerFecha().c_str());
+                strcpy(primerJournal.j_operation,"mkdir -path=/");
+                fseek(disco,(particion.particion.part_start + sizeof (SuperBlock) + sizeof (Journal)),SEEK_SET);
+                fwrite(&primerJournal,sizeof (Journal),1,disco);
+
+                //ahora para el archivo users.txt
+                inodo.i_size = contenido.length();
+                strcpy(inodo.i_atime,obtenerFecha().c_str());
+                strcpy(inodo.i_mtime,obtenerFecha().c_str());
+                inodo.i_block = 1;
+                inodo.i_type = 0;
+                fseek(disco,(SB.s_inode_start + inode_size),SEEK_SET);
+                fwrite(&inodo,sizeof (Inode),1,disco);
+                Bloque_Archivo bloqueArchivo;
+                strcpy(bloqueArchivo.b_content,contenido.c_str());
+                fseek(disco,(SB.s_block_start + 64),SEEK_SET);
+                fwrite(&bloqueArchivo,64,1,disco);
+
+                strcpy(primerJournal.j_fecha_hora,obtenerFecha().c_str());
+                strcpy(primerJournal.j_operation,"mkfile -path=/users.txt -size=27");
+                fseek(disco,(particion.particion.part_start + sizeof (SuperBlock) + ( 2 * sizeof (Journal))),SEEK_SET);
+                fwrite(&primerJournal,sizeof (Journal),1,disco);
+
+
+                fclose(disco);
+
+                ofstream archivo;
+                archivo.open("/users.txt");
+                archivo << contenido << endl;
+                archivo.close();
+                cout << " ::Particion " << this->id.toStdString() << " formateada" << endl;
+
+
+            }else cout << "error: el disco " << char256 << " no existe" << endl;
+        }
+    }
 }
 
 void Ejecutar::pause(){
@@ -963,7 +1195,8 @@ void Ejecutar::colocarParametros(Nodo *raiz){
             break;
         case 7: // type
             {
-                if(valor.toUpper() == "P" || valor.toUpper() == "E" || valor.toUpper() == "L") this->type = valor;
+                if(valor.toUpper() == "P" || valor.toUpper() == "E" || valor.toUpper() == "L" ||
+                        valor.toUpper() == "FAST" || valor.toUpper() == "FULL") this->type = valor;
                 else cout << "error: El tipo " << valor.toStdString() << " no es valido" << endl;
             }
             break;

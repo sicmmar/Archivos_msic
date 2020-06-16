@@ -9,6 +9,7 @@ using namespace std;
 Montar::Montar(){
     this->listaDiscos = QList<Disco>();
     this->listaParticion = QList<Particion>();
+    this->fechaUnmount = "";
 }
 
 void Montar::agregarParticion(Particion nueva){
@@ -35,7 +36,7 @@ void Montar::agregarParticion(Particion nueva){
 
 }
 
-void Montar::quitarParticion(QString id){
+void Montar::quitarParticion(QString id, string fecha){
     int posParticion = buscarParticion("\0", "\0", id);
     if(posParticion >= 0){
         string respuesta;
@@ -43,6 +44,7 @@ void Montar::quitarParticion(QString id){
         getline(cin, respuesta);
         if(strcmp(respuesta.c_str(), "n") == 0 || strcmp(respuesta.c_str(), "N") == 0) cout << " ::La particion " << id.toStdString() << " no se ha desmontado" << endl;
         else{
+            this->fechaUnmount = fecha;
             this->listaParticion.removeAt(posParticion);
             cout << " ::Particion " << id.toStdString() << " desmontada " << endl;
         }
@@ -56,6 +58,13 @@ int Montar::buscarParticion(QString nombre, QString path, QString iden){
         else if(this->listaParticion.at(i).name == nombre && this->listaParticion.at(i).path == path) return i;
     }
     return -1;
+}
+
+Particion Montar::devolverParticion(QString iden){
+    int posParticion = buscarParticion("\0", "\0", iden);
+    if(posParticion >= 0)
+        return this->listaParticion.at(posParticion);
+    else return Particion();
 }
 
 int Montar::buscarDiscos(QString path){

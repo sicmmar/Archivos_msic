@@ -5,13 +5,18 @@
 #include <QString>
 #include "Particion.h"
 #include "Disco.h"
+#include <stdlib.h>
+
+using namespace::std;
 
 class Montar{
 public:
     Montar();
     void agregarParticion(Particion nueva);
-    void quitarParticion(QString id);
+    void quitarParticion(QString id, string fecha);
     int buscarParticion(QString nombre, QString path, QString iden);
+    Particion devolverParticion(QString iden);
+    string fechaUnmount;
     QList<Disco> listaDiscos;
     QList<Particion> listaParticion;
     int buscarDiscos(QString path);
