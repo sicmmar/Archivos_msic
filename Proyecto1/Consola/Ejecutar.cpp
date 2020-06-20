@@ -53,12 +53,13 @@ struct SuperBlock{
 };
 
 struct Inode{
+    int i_id;
     int i_uid;
     int i_gid;
     int i_size;
     char i_atime[32];
     char i_mtime[32];
-    int i_block;
+    int i_block[15];
     int i_type;
     int i_perm;
 };
@@ -69,14 +70,17 @@ struct Content{
 };
 
 struct Bloque_Carpeta{
+    int b_id;
     Content b_content[4];
 };
 
 struct Bloque_Archivo{
+    int b_id;
     char b_content[64];
 };
 
 struct Bloque_Apuntador{
+    int b_id;
     int b_pointers[16];
 };
 
@@ -88,16 +92,18 @@ struct Journal{
 
 Ejecutar::Ejecutar(){
     this->raiz = NULL;
+    this->usuario = new Usuario();
 }
 
 const int magic_number = 0xEF53;
 const int inode_size = sizeof (Inode);
-const int block_size = 64;
+const int block_size = 68;
 const char unUno = '1';
 const char unCero = '0';
 
-void Ejecutar::ejecutar(Nodo *raiz, Montar *lista){
+void Ejecutar::ejecutar(Nodo *raiz, Montar *lista, Usuario *usuario){
     this->listaParticiones = lista;
+    this->usuario = usuario;
     this->raiz = raiz;
     this->recorrer(raiz);
 }
@@ -171,6 +177,23 @@ void Ejecutar::recorrer(Nodo *raiz){
     {
         Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
         this->mkfs(&param);
+    }
+        break;
+    case 32: // login
+    {
+        Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
+        this->login(&param);
+    }
+        break;
+    case 33: // logout
+    {
+        this->logout();
+    }
+        break;
+    case 34: // mkgrp
+    {
+        Nodo param = raiz->hijos.at(0); //envio el nodo de lista de parametros
+        this->mkgrp(&param);
     }
         break;
     }
@@ -719,7 +742,7 @@ void Ejecutar::rep(Nodo *raiz){
         int posicionParticion = this->listaParticiones->buscarParticion("\0", "\0", this->id);
         if(posicionParticion < 0) cout << "error: la particion " << this->id.toStdString() << " no esta montada" << endl;
         else{
-            if(this->path.split(".")[1].toUpper() == "JPG" || this->path.split(".")[1].toUpper() == "JPEG" || this->path.split(".")[1].toUpper() == "PNG"){
+            if(this->path.split(".")[1].toUpper() == "JPG" || this->path.split(".")[1].toUpper() == "JPEG" || this->path.split(".")[1].toUpper() == "PNG" || this->path.split(".")[1].toUpper() == "TXT"){
                 MBR mbr;
                 char comando[500];
                 QStringList arr = this->path.split("/");
@@ -746,12 +769,10 @@ void Ejecutar::rep(Nodo *raiz){
                 fseek(f1,0,SEEK_SET);// estableciendo puntero al inicio
                 bool esunDot = true;
                 if(f1 != 0){
-                    fread(&mbr, sizeof (MBR), 1, f1);
-                    int tamanoDisco = mbr.mbr_tamano;
                     if(this->nombre.toUpper() == "MBR"){
+                        fread(&mbr, sizeof (MBR), 1, f1);
+                        int tamanoDisco = mbr.mbr_tamano;
                         texto += "label=\"" + pathDisco + "\";\nnode [shape=box];\n";
-                        //aca van los EBR:
-                        //va el MBR:
                         texto += "mbr [label=<\n<TABLE cellspacing=\"10\" cellpadding=\"10\">\n";
                         texto += "<TR><TD colspan=\"2\" bgcolor=\"darkolivegreen3\" >MBR</TD></TR>\n";
                         texto += "<TR><TD>mbr_tamano</TD><TD>" + QString::number(tamanoDisco) + "</TD></TR>\n";
@@ -770,6 +791,8 @@ void Ejecutar::rep(Nodo *raiz){
                         }
                         texto += "</TABLE>>];\n}";
                     }else if(this->nombre.toUpper() == "DISK"){
+                        fread(&mbr, sizeof (MBR), 1, f1);
+                        int tamanoDisco = mbr.mbr_tamano;
                         int numNodo = 0;
                         texto +="graph [nodesep=0.01, rankdir=\"LR\", label=\"" + pathDisco + "\"];\n";
                         texto += "edge [color=white, arrowsize=.01, weight=.01, penwidth=.01];\n";
@@ -843,7 +866,34 @@ void Ejecutar::rep(Nodo *raiz){
                         texto += "}";
                     }
                     else if(this->nombre.toUpper() == "INODE"){
+                        fseek(f1,particion.part_start,SEEK_SET);
+                        SuperBlock sb;
+                        fread(&sb,sizeof (sb),1,f1);
+                        texto += "label = \"" + this->id + "\";\nnode [shape=box];";
+                        int inodos_ocupados = sb.s_inodes_count - sb.s_free_inodes_count, j = 0;
+                        fseek(f1,sb.s_inode_start,SEEK_SET);
+                        while( j != inodos_ocupados){
+                            Inode inodo;
+                            fread(&inodo,sizeof (Inode),1,f1);
+                            if(inodo.i_uid > 0){
+                                strcpy(inodo.i_atime,obtenerFecha().c_str());
+                                texto += "I" + QString::number(inodo.i_id) + " [label=<<TABLE cellspacing=\"10\" cellpadding=\"10\">\n";
+                                texto += "<TR><TD colspan=\"2\" bgcolor=\"thistle2\">INODE_" + QString::number(inodo.i_id) + "</TD></TR>";
+                                texto += "<TR><TD>i_uid</TD><TD>" + QString::number(inodo.i_uid) + "</TD></TR>\n";
+                                texto += "<TR><TD>i_gid</TD><TD>" + QString::number(inodo.i_gid) + "</TD></TR>\n";
+                                texto += "<TR><TD>i_size</TD><TD>" + QString::number(inodo.i_size) + "</TD></TR>\n";
+                                texto += "<TR><TD>i_atime</TD><TD>" + QString::fromStdString(inodo.i_atime) + "</TD></TR>\n";
+                                texto += "<TR><TD>i_mtime</TD><TD>" + QString::fromStdString(inodo.i_mtime) + "</TD></TR>\n";
+                                for(int n = 0; n < 15; n++)
+                                    texto += "<TR><TD>i_block_" + QString::number(n) + "</TD><TD>" + QString::number(inodo.i_block[n]) + "</TD></TR>\n";
 
+                                texto += "<TR><TD>i_type</TD><TD>" + QString::number(inodo.i_type) + "</TD></TR>\n";
+                                texto += "<TR><TD>i_perm</TD><TD>" + QString::number(inodo.i_perm) + "</TD></TR>\n";
+                                texto += "</TABLE>>];\n";
+                            }
+                            j++;
+                        }
+                        texto += "}";
                     }else if(this->nombre.toUpper() == "JOURNALING"){
                         texto += "label = \"" + this->id + "\";\nnode [shape=box];\nb  [label=<" +
                                 "<TABLE cellspacing=\"10\" cellpadding=\"10\">\n<TR><TD colspan=\"3\" bgcolor=\"darkolivegreen3\">" +
@@ -863,27 +913,190 @@ void Ejecutar::rep(Nodo *raiz){
                         }
                         texto += "</TABLE>>];\n}";
                     }else if(this->nombre.toUpper() == "BLOCK"){
-
+                        fseek(f1,particion.part_start,SEEK_SET);
+                        SuperBlock sb;
+                        fread(&sb,sizeof (sb),1,f1);
+                        texto += "label = \"" + this->id + "\";\nnode [shape=box];\n";
+                        int bloques_ocupados = sb.s_blocks_count - sb.s_free_block_count, j = 0;
+                        fseek(f1,sb.s_block_start,SEEK_SET);
+                        while( j != bloques_ocupados){
+                            Bloque_Carpeta b_carpeta;
+                            Bloque_Archivo b_archivo;
+                            Bloque_Apuntador b_apuntador;
+                            fread(&b_carpeta,block_size,1,f1);
+                            if(b_carpeta.b_id > 0 && b_carpeta.b_id <= bloques_ocupados){
+                                texto += "C" + QString::number(b_carpeta.b_id) + " [label=<<TABLE cellspacing=\"10\" cellpadding=\"10\">\n";
+                                texto += "<TR><TD colspan=\"3\" bgcolor=\"deepskyblue\">BLOQUE_CARPETA_" + QString::number(b_carpeta.b_id) + "</TD></TR>";
+                                texto += "<TR><TD></TD><TD>NOMBRE</TD><TD>INODO</TD></TR>\n";
+                                for(int t = 0; t < 4; t++){
+                                    if(b_carpeta.b_content[t].b_inode > 0)
+                                        texto += "<TR><TD>b_" + QString::number(t+1) + "</TD><TD>" + b_carpeta.b_content[t].b_name + "</TD><TD>" + QString::number(b_carpeta.b_content[t].b_inode) + "</TD></TR>\n";
+                                    else
+                                        texto += "<TR><TD>b_" + QString::number(t+1) + "</TD><TD> - </TD><TD>" + QString::number(b_carpeta.b_content[t].b_inode) + "</TD></TR>\n";
+                                }
+                                texto += "</TABLE>>];\n";
+                            }
+                            fread(&b_archivo,block_size,1,f1);
+                            if(b_archivo.b_id > 0 && b_archivo.b_id <= bloques_ocupados){
+                                texto += "A" + QString::number(b_archivo.b_id) + " [label=<<TABLE cellspacing=\"10\" cellpadding=\"10\">\n";
+                                texto += "<TR><TD bgcolor=\"lemonchiffon2\">BLOQUE_ARCHIVO_" + QString::number(b_archivo.b_id) + "</TD></TR>";
+                                texto += "<TR><TD>" + QString::fromStdString(b_archivo.b_content) + "</TD></TR>\n";
+                                texto += "</TABLE>>];\n";
+                            }
+                            fread(&b_apuntador,block_size,1,f1);
+                            if(b_apuntador.b_id > 0 && b_apuntador.b_id <= bloques_ocupados){
+                                texto += "AP" + QString::number(b_apuntador.b_id) + " [label=<<TABLE cellspacing=\"10\" cellpadding=\"10\">\n";
+                                texto += "<TR><TD colspan=\"2\" bgcolor=\"gold1\">BLOQUE_APUNTADOR_" + QString::number(b_apuntador.b_id) + "</TD></TR>";
+                                texto += "<TR><TD></TD><TD>BLOQUE</TD></TR>\n";
+                                for(int t = 0; t < 16; t++){
+                                    if(b_apuntador.b_pointers[t] > 0)
+                                        texto += "<TR><TD>b_" + QString::number(t+1) + "</TD><TD>" + QString::number(b_apuntador.b_pointers[t]) + "</TD></TR>\n";
+                                    else
+                                        texto += "<TR><TD>b_" + QString::number(t+1) + "</TD><TD>-1</TD></TR>\n";
+                                }
+                                texto += "</TABLE>>];\n";
+                            }
+                            j++;
+                        }
+                        texto += "}";
                     }else if(this->nombre.toUpper() == "BM_INODE"){
+                        esunDot = false;
+                        fseek(f1,particion.part_start,SEEK_SET);
+                        SuperBlock sb;
+                        fread(&sb,sizeof (sb),1,f1);
+                        fseek(f1,sb.s_bm_inode_start,SEEK_SET);
+                        char aux[sb.s_inodes_count];
+                        fread(&aux,sb.s_inodes_count,1,f1);
+                        texto = aux[0];
+                        for(int i = 1; i < sb.s_inodes_count; i++){
+                            if(i%20 == 0)texto += "\n";
+                            else texto += aux[i];
+                        }
+
+                    }else if(this->nombre.toUpper() == "BM_BLOCK"){
                         esunDot = false;
                         texto = "";
                         fseek(f1,particion.part_start,SEEK_SET);
                         SuperBlock sb;
                         fread(&sb,sizeof (sb),1,f1);
-                        fseek(f1,(particion.part_start + sizeof (SuperBlock) + (sb.s_inodes_count * sizeof (Journal))),SEEK_SET);
-                        int fin=sb.s_inodes_count/20, j = 0;
-                        char lectura[20];
-                        while(j != fin){
-                            fread(&lectura,20,1,f1);
-                            string l(lectura);
-                            texto += QString::fromStdString(l) + "\n";
+                        fseek(f1,sb.s_bm_block_start,SEEK_SET);
+                        char aux[sb.s_blocks_count];
+                        fread(&aux,sb.s_blocks_count,1,f1);
+                        texto = aux[0];
+                        for(int i = 1; i < sb.s_blocks_count; i++){
+                            if(i%20 == 0)texto += "\n";
+                            else texto += aux[i];
+                        }
+                    }else if(this->nombre.toUpper() == "TREE"){
+                        fseek(f1,particion.part_start,SEEK_SET);
+                        SuperBlock sb;
+                        fread(&sb,sizeof (sb),1,f1);
+                        texto += "label = \"" + this->id + "\";\nrankdir=\"LR\";\nnode [shape=box];\n";
+                        const int inodos_ocupados = (sb.s_inodes_count - sb.s_free_inodes_count);
+                        int m = 0;
+                        fseek(f1,sb.s_inode_start,SEEK_SET);
+                        while( m != inodos_ocupados){
+                            Inode inodo;
+                            fread(&inodo,sizeof (Inode),1,f1);
+                            if(inodo.i_id > 0 && inodo.i_id <= inodos_ocupados){
+                                strcpy(inodo.i_atime,obtenerFecha().c_str());
+                                texto += "I" + QString::number(inodo.i_id) + " [label=<<TABLE cellspacing=\"10\" cellpadding=\"10\">\n";
+                                texto += "<TR><TD colspan=\"2\" bgcolor=\"thistle2\">INODE_" + QString::number(inodo.i_id) + "</TD></TR>";
+                                texto += "<TR><TD>i_uid</TD><TD>" + QString::number(inodo.i_uid) + "</TD></TR>\n";
+                                texto += "<TR><TD>i_gid</TD><TD>" + QString::number(inodo.i_gid) + "</TD></TR>\n";
+                                texto += "<TR><TD>i_size</TD><TD>" + QString::number(inodo.i_size) + "</TD></TR>\n";
+                                texto += "<TR><TD>i_atime</TD><TD>" + QString::fromStdString(inodo.i_atime) + "</TD></TR>\n";
+                                texto += "<TR><TD>i_mtime</TD><TD>" + QString::fromStdString(inodo.i_mtime) + "</TD></TR>\n";
+                                for(int n = 0; n < 15; n++)
+                                    texto += "<TR><TD>i_block_" + QString::number(n) + "</TD><TD>" + QString::number(inodo.i_block[n]) + "</TD></TR>\n";
+
+                                texto += "<TR><TD>i_type</TD><TD>" + QString::number(inodo.i_type) + "</TD></TR>\n";
+                                texto += "<TR><TD>i_perm</TD><TD>" + QString::number(inodo.i_perm) + "</TD></TR>\n";
+                                texto += "</TABLE>>];\n";
+                            }
+                            m++;
+                        }
+
+                        const int bloques_ocupados = (sb.s_blocks_count - sb.s_free_block_count);
+                        int j = 0;
+                        fseek(f1,sb.s_block_start,SEEK_SET);
+                        while( j != bloques_ocupados){
+                            Bloque_Carpeta b_carpeta;
+                            Bloque_Archivo b_archivo;
+                            Bloque_Apuntador b_apuntador;
+                            fread(&b_carpeta,block_size,1,f1);
+                            if(b_carpeta.b_id > 0 && b_carpeta.b_id <= bloques_ocupados){
+                                texto += "B" + QString::number(b_carpeta.b_id) + " [label=<<TABLE cellspacing=\"10\" cellpadding=\"10\">\n";
+                                texto += "<TR><TD colspan=\"3\" bgcolor=\"deepskyblue\">BLOQUE_CARPETA_" + QString::number(b_carpeta.b_id) + "</TD></TR>";
+                                texto += "<TR><TD></TD><TD>NOMBRE</TD><TD>INODO</TD></TR>\n";
+                                for(int t = 0; t < 4; t++){
+                                    if(b_carpeta.b_content[t].b_inode > 0)
+                                        texto += "<TR><TD>b_" + QString::number(t+1) + "</TD><TD>" + b_carpeta.b_content[t].b_name + "</TD><TD>" + QString::number(b_carpeta.b_content[t].b_inode) + "</TD></TR>\n";
+                                    else
+                                        texto += "<TR><TD>b_" + QString::number(t+1) + "</TD><TD> - </TD><TD>" + QString::number(b_carpeta.b_content[t].b_inode) + "</TD></TR>\n";
+                                }
+                                texto += "</TABLE>>];\n";
+                            }
+                            fread(&b_archivo,block_size,1,f1);
+                            if(b_archivo.b_id > 0 && b_archivo.b_id <= bloques_ocupados){
+                                texto += "B" + QString::number(b_archivo.b_id) + " [label=<<TABLE cellspacing=\"10\" cellpadding=\"10\">\n";
+                                texto += "<TR><TD bgcolor=\"lemonchiffon2\">BLOQUE_ARCHIVO_" + QString::number(b_archivo.b_id) + "</TD></TR>";
+                                texto += "<TR><TD>" + QString::fromStdString(b_archivo.b_content) + "</TD></TR>\n";
+                                texto += "</TABLE>>];\n";
+                            }
+                            fread(&b_apuntador,block_size,1,f1);
+                            if(b_apuntador.b_id > 0 && b_apuntador.b_id <= bloques_ocupados){
+                                texto += "B" + QString::number(b_apuntador.b_id) + " [label=<<TABLE cellspacing=\"10\" cellpadding=\"10\">\n";
+                                texto += "<TR><TD colspan=\"2\" bgcolor=\"gold1\">BLOQUE_APUNTADOR_" + QString::number(b_apuntador.b_id) + "</TD></TR>";
+                                texto += "<TR><TD></TD><TD>BLOQUE</TD></TR>\n";
+                                for(int t = 0; t < 16; t++){
+                                    if(b_apuntador.b_pointers[t] > 0)
+                                        texto += "<TR><TD>b_" + QString::number(t+1) + "</TD><TD>" + QString::number(b_apuntador.b_pointers[t]) + "</TD></TR>\n";
+                                    else
+                                        texto += "<TR><TD>b_" + QString::number(t+1) + "</TD><TD>-1</TD></TR>\n";
+                                }
+                                texto += "</TABLE>>];\n";
+                            }
+                            j++;
+                        }
+                        m = 0;
+                        fseek(f1,sb.s_inode_start,SEEK_SET);
+                        while( m != inodos_ocupados){
+                            Inode inodo;
+                            fread(&inodo,sizeof (Inode),1,f1);
+                            if(inodo.i_id > 0 && inodo.i_id <= inodos_ocupados){
+                                for(int n = 0; n < 15; n++){
+                                    if(inodo.i_block[n] > 0)
+                                        texto += "I" + QString::number(inodo.i_id) + " -> B" + QString::number(inodo.i_block[n]) +";\n";
+                                }
+                            }
+                            m++;
+                        }
+
+                        j = 0;
+                        fseek(f1,sb.s_block_start,SEEK_SET);
+                        while( j != bloques_ocupados){
+                            Bloque_Carpeta b_carpeta;
+                            fread(&b_carpeta,block_size,1,f1);
+                            if(b_carpeta.b_id > 0 && b_carpeta.b_id <= bloques_ocupados){
+                                for(int t = 0; t < 4; t++){
+                                    if(b_carpeta.b_content[t].b_inode > 0 && b_carpeta.b_content[t].b_inode <= bloques_ocupados)
+                                        texto += "B" + QString::number(b_carpeta.b_id) + " -> I" + QString::number(b_carpeta.b_content[t].b_inode) + ";\n";
+                                }
+                            }
+
+                            Bloque_Apuntador b_apuntador;
+                            fread(&b_apuntador,block_size,1,f1);
+                            if(b_apuntador.b_id > 0 && b_apuntador.b_id <= bloques_ocupados){
+                                for(int t = 0; t < 16; t++){
+                                    if(b_apuntador.b_pointers[t] > 0 && b_apuntador.b_pointers[t] <= bloques_ocupados)
+                                        texto += "B" + QString::number(b_apuntador.b_id) + " -> B" + QString::number(b_apuntador.b_pointers[t]) + ";\n";
+                                }
+                            }
                             j++;
                         }
 
-                    }else if(this->nombre.toUpper() == "BM_BLOCK"){
-
-                    }else if(this->nombre.toUpper() == "TREE"){
-
+                        texto += "}";
                     }else if(this->nombre.toUpper() == "SB"){
                         texto += "label = \"" + this->id + "\";\nnode [shape=box];\nb  [label=<" +
                                 "<TABLE cellspacing=\"10\" cellpadding=\"10\">\n<TR><TD colspan=\"2\" bgcolor=\"darkolivegreen3\">" +
@@ -910,7 +1123,10 @@ void Ejecutar::rep(Nodo *raiz){
                         texto += "<TR><TD>s_first_blo</TD><TD>" + QString::number(SB.s_first_blo) + "</TD></TR>\n";
                         texto += "</TABLE>>];\n}";
                     }else if(this->nombre.toUpper() == "FILE"){
-
+                        if(this->ruta != "" && this->ruta.contains(".")){
+                            //reporte
+                            texto +="}";
+                        }else cout << "error: reporte 'file' debe tener la ruta del archivo a mostrar" << endl;
                     }else if(this->nombre.toUpper() == "LS"){
 
                     }
@@ -983,6 +1199,72 @@ void Ejecutar::unmount(Nodo *raiz){
     if(parametrosObligatorios(9))this->listaParticiones->quitarParticion(this->id,obtenerFecha());
 }
 
+void Ejecutar::login(Nodo *raiz){
+    this->limpiarVariables();
+    for(int i = 0; i < raiz->hijos.length(); i++){
+        Nodo p = raiz->hijos.at(i); //envio el nodo del parametro unitario (size, path, name, etc)
+        colocarParametros(&p);
+    }
+
+    if(parametrosObligatorios(10)){
+        if(usuario->hayUsuario)cout << "error: primero debe cerrar sesion de " << usuario->nombre << endl;
+        else{
+            Particion particion = this->listaParticiones->devolverParticion(this->id);
+            if(particion.name == "NULL")cout << "error: la particion " << this->id.toStdString() << " no esta montada" << endl;
+            else{
+                char char256[256];
+                strcpy(char256,particion.path.toStdString().c_str());
+                FILE* disco = fopen(char256,"r+b");
+                if(disco != 0){
+                    SuperBlock SB;
+                    Inode inodo;
+                    fseek(disco,particion.particion.part_start,SEEK_SET);
+                    fread(&SB,sizeof (SB),1,disco);
+                    fseek(disco,(SB.s_inode_start + inode_size),SEEK_SET);
+                    fread(&inodo,inode_size,1,disco);
+                    QString contenido = "";
+                    for(int i = 0; i < 15; i++){
+                        if(inodo.i_block[i] > 0 && inodo.i_block[i] <= abs(SB.s_blocks_count - SB.s_free_block_count)){
+                            Bloque_Archivo archivo;
+                            fseek(disco,(SB.s_block_start + ((inodo.i_block[i] - 1) * block_size)),SEEK_SET);
+                            fread(&archivo,block_size,1,disco);
+                            contenido += QString::fromStdString(archivo.b_content);
+                        }
+                    }
+
+                    QStringList linea = contenido.split('\n');
+                    int j = 0, encontrado = 0;
+                    while(j < (linea.length() - 1) && !encontrado){
+                        QStringList individual = linea[j].split(',');
+                        if(individual[1].toUpper() == "U"){
+                            if(individual[3] == this->usr && individual[4] == this->pwd){
+                                strcpy(this->usuario->grupo,individual[2].toStdString().c_str());
+                                strcpy(this->usuario->nombre, this->usr.toStdString().c_str());
+                                strcpy(this->usuario->passwd, this->pwd.toStdString().c_str());
+                                this->usuario->hayUsuario = true;
+                                this->usuario->particion = particion;
+                                cout << " ::Acceso a " << this->usr.toStdString() << " concedido " << endl;
+                                encontrado = 1;
+                            }
+                        }
+                        j++;
+                    }
+
+                    if(!encontrado)cout << "error: acceso a usuario '" << this->usr.toStdString() << "' denegado, verificar credenciales" << endl;
+                    fclose(disco);
+                }else cout << "error: el disco " << char256 << " no existe" << endl;
+            }
+        }
+    }
+}
+
+void Ejecutar::logout(){
+    if(this->usuario->hayUsuario){
+        cout << " ::Sesion de " << this->usuario->nombre << " cerrada" << endl;
+        this->usuario = new Usuario();
+    }else cout << "error: no hay usuario activo" << endl;
+}
+
 void Ejecutar::mkfs(Nodo *raiz){
     this->limpiarVariables();
     for(int i = 0; i < raiz->hijos.length(); i++){
@@ -1013,7 +1295,7 @@ void Ejecutar::mkfs(Nodo *raiz){
                 }
 
                 //calculo el numero de bloques
-                const double n = (particion.particion.part_size - sizeof (SuperBlock)) / (sizeof (Journal) + 4 + inode_size + (3 * 64));
+                const double n = (particion.particion.part_size - sizeof (SuperBlock)) / (sizeof (Journal) + 4 + inode_size + (3 * block_size));
                 const int numero_bloques = floor(n);
 
                 SuperBlock SB;
@@ -1062,21 +1344,29 @@ void Ejecutar::mkfs(Nodo *raiz){
                 fwrite(&unUno,1,1,disco);
                 //primer inodo y primer bloque de archivos para /
                 Inode inodo;
+                inodo.i_id = 1;
                 inodo.i_uid = 1;
                 inodo.i_gid = 1;
                 inodo.i_size = 0;
                 strcpy(inodo.i_atime,obtenerFecha().c_str());
                 strcpy(inodo.i_mtime,obtenerFecha().c_str());
-                inodo.i_block = 0;
+                inodo.i_block[0] = 1;
+                for(int g = 1; g < 15; g++)
+                    inodo.i_block[g] = -1;
+
                 inodo.i_type = 1;
                 inodo.i_perm = 777;
                 fseek(disco,SB.s_inode_start,SEEK_SET);
                 fwrite(&inodo,sizeof (Inode),1,disco);
                 Bloque_Carpeta bloque;
+                bloque.b_id = 1;
                 strcpy(bloque.b_content[0].b_name,"/");
-                bloque.b_content[0].b_inode = 1;
+                bloque.b_content[0].b_inode = 2;
+                for(int h = 1; h < 4; h++)
+                    bloque.b_content[h].b_inode = -1;
+
                 fseek(disco,SB.s_block_start,SEEK_SET);
-                fwrite(&bloque,64,1,disco);
+                fwrite(&bloque,block_size,1,disco);
 
                 strcpy(primerJournal.j_fecha_hora,obtenerFecha().c_str());
                 strcpy(primerJournal.j_operation,"mkdir -path=/");
@@ -1084,17 +1374,22 @@ void Ejecutar::mkfs(Nodo *raiz){
                 fwrite(&primerJournal,sizeof (Journal),1,disco);
 
                 //ahora para el archivo users.txt
+                inodo.i_id = 2;
                 inodo.i_size = contenido.length();
                 strcpy(inodo.i_atime,obtenerFecha().c_str());
                 strcpy(inodo.i_mtime,obtenerFecha().c_str());
-                inodo.i_block = 1;
+                inodo.i_block[0] = 2;
+                for(int g = 1; g < 15; g++)
+                    inodo.i_block[g] = -1;
+
                 inodo.i_type = 0;
                 fseek(disco,(SB.s_inode_start + inode_size),SEEK_SET);
                 fwrite(&inodo,sizeof (Inode),1,disco);
                 Bloque_Archivo bloqueArchivo;
+                bloqueArchivo.b_id = 2;
                 strcpy(bloqueArchivo.b_content,contenido.c_str());
-                fseek(disco,(SB.s_block_start + 64),SEEK_SET);
-                fwrite(&bloqueArchivo,64,1,disco);
+                fseek(disco,(SB.s_block_start + block_size),SEEK_SET);
+                fwrite(&bloqueArchivo,block_size,1,disco);
 
                 strcpy(primerJournal.j_fecha_hora,obtenerFecha().c_str());
                 strcpy(primerJournal.j_operation,"mkfile -path=/users.txt -size=27");
@@ -1103,16 +1398,126 @@ void Ejecutar::mkfs(Nodo *raiz){
 
 
                 fclose(disco);
-
-                ofstream archivo;
-                archivo.open("/users.txt");
-                archivo << contenido << endl;
-                archivo.close();
                 cout << " ::Particion " << this->id.toStdString() << " formateada" << endl;
 
 
             }else cout << "error: el disco " << char256 << " no existe" << endl;
         }
+    }
+}
+
+void Ejecutar::mkgrp(Nodo *raiz){
+    this->limpiarVariables();
+    for(int i = 0; i < raiz->hijos.length(); i++){
+        Nodo p = raiz->hijos.at(i); //envio el nodo del parametro unitario (size, path, name, etc)
+        colocarParametros(&p);
+    }
+
+    if(parametrosObligatorios(11)){
+        if(this->usuario->hayUsuario){
+            if(!strcmp(this->usuario->nombre,"root")){
+                QString restante = "";
+                Particion particion = this->usuario->particion;
+                char char256[256];
+                strcpy(char256,particion.path.toStdString().c_str());
+                FILE* disco = fopen(char256,"r+b");
+                if(disco != 0){
+                    SuperBlock SB;
+                    Inode inodo;
+                    fseek(disco,particion.particion.part_start,SEEK_SET);
+                    fread(&SB,sizeof (SB),1,disco);
+                    fseek(disco,(SB.s_inode_start + inode_size),SEEK_SET);
+                    fread(&inodo,inode_size,1,disco);
+                    QString contenido = "";
+                    for(int i = 0; i < 15; i++){
+                        if(inodo.i_block[i] > 0 && inodo.i_block[i] <= abs(SB.s_blocks_count - SB.s_free_block_count)){
+                            Bloque_Archivo archivo;
+                            fseek(disco,(SB.s_block_start + ((inodo.i_block[i] - 1) * block_size)),SEEK_SET);
+                            fread(&archivo,block_size,1,disco);
+                            contenido += QString::fromStdString(archivo.b_content);
+                        }
+                    }
+                    QString aux = contenido;
+                    QStringList linea = contenido.split('\n');
+                    int j = 0, encontrado = 0, id_colocar = 0;
+                    while(j < (linea.length() - 1) && !encontrado){
+                        QStringList individual = linea[j].split(',');
+                        if(individual[1].toUpper() == "G"){
+                            if(individual[2] == this->nombre)encontrado = 1;
+                            id_colocar = individual[0].toInt();
+                        }
+                        j++;
+                    }
+
+                    if(encontrado)cout << "error: el " << this->nombre.toStdString() << " ya existe" << endl;
+                    else{
+                        id_colocar++;
+                        QString a_agregar = QString::number(id_colocar) + ",G," + this->nombre + "\n";
+                        fseek(disco,(SB.s_inode_start + inode_size),SEEK_SET);
+                        fread(&inodo,inode_size,1,disco);
+                        int i = 0, ejecutado = 0;
+                        while(i < 15 && !ejecutado){
+                            if(inodo.i_block[i] > 0 && inodo.i_block[i] <= abs(SB.s_blocks_count - SB.s_free_block_count)){
+                                Bloque_Archivo archivo;
+                                fseek(disco,(SB.s_block_start + ((inodo.i_block[i] - 1) * block_size)),SEEK_SET);
+                                fread(&archivo,block_size,1,disco);
+                                if(strlen(archivo.b_content) <= 64){
+                                    int caracteresdisponibles = 64 - strlen(archivo.b_content);
+                                    if(a_agregar.length() <= caracteresdisponibles){
+                                        aux += a_agregar;
+                                        ejecutado = 1;
+                                    }else{
+                                        aux += (a_agregar.left(caracteresdisponibles));
+                                        restante = a_agregar.replace(a_agregar.left(caracteresdisponibles), "");
+                                    }
+                                    strcpy(archivo.b_content,aux.toStdString().c_str());
+                                    inodo.i_size = strlen(archivo.b_content);
+                                    fseek(disco,(SB.s_block_start + ((inodo.i_block[i] - 1) * block_size)),SEEK_SET);
+                                    fwrite(&archivo,block_size,1,disco);
+                                }
+                            }else if(inodo.i_block[i] == -1){ //inactivo
+                                if(restante.length() > 0){
+                                    int bloqueSig = SB.s_blocks_count - SB.s_free_block_count + 1, g = 0, flag = 0;
+                                    fseek(disco,SB.s_bm_block_start,SEEK_SET);
+                                    while(g < SB.s_blocks_count && !flag){
+                                        char kk;
+                                        fread(&kk,1,1,disco);
+                                        if(kk == '0'){
+                                            flag = 1;
+                                            fwrite(&unUno,1,1,disco);
+                                            SB.s_free_block_count = SB.s_free_block_count - 1;
+                                        }
+                                        g++;
+                                    }
+                                    if(flag){
+                                        inodo.i_block[i] = bloqueSig;
+                                        Bloque_Archivo arrrrchivo;
+                                        arrrrchivo.b_id = bloqueSig;
+                                        if(restante.length() <= 64){
+                                            strcpy(arrrrchivo.b_content,restante.toStdString().c_str());
+                                            ejecutado = 1;
+                                        }else{
+                                            strcpy(arrrrchivo.b_content,restante.left(64).toStdString().c_str());
+                                            restante = restante.replace(restante.left(64), "");
+                                        }
+                                        fseek(disco,(SB.s_block_start + ((inodo.i_block[i] - 1) * block_size)),SEEK_SET);
+                                        fwrite(&arrrrchivo,block_size,1,disco);
+                                    }else cout << "error: ya no hay espacio para mas bloques " << endl;
+                                }
+                            }
+                            fseek(disco,(SB.s_inode_start + inode_size),SEEK_SET);
+                            fwrite(&inodo,inode_size,1,disco);
+                            i++;
+                        }
+                        fseek(disco,(SB.s_inode_start + inode_size),SEEK_SET);
+                        fwrite(&inodo,inode_size,1,disco);
+                    }
+                    fseek(disco,particion.particion.part_start,SEEK_SET);
+                    fwrite(&SB,sizeof (SB),1,disco);
+                    fclose(disco);
+                }
+            }else cout << "error: el comando mkgrp solo lo puede ejecutar el usuario 'root'" << endl;
+        }else cout << "error: debe iniciar sesion de primero " << endl;
     }
 }
 
@@ -1137,10 +1542,9 @@ bool Ejecutar::parametrosCorrectos(int comando){ //parametros obligatorios
     else if(comando == 6 && this->nombre != "" && this->path != "" && this->id != ""){
         if(reporteValido(this->nombre.toUpper()))return true;
         else cout << "error: el reporte de " << this->nombre.toStdString() << " no existe" << endl;
-    }
-    else if(comando == 9 && this->id != "") return true;
+    }else if(comando == 9 && this->id != "") return true;
     else if(comando == 10 && this->usr != "" && this->pwd != "" && this->id != "")return true;
-    else if(comando == 11 && this->nombre != "")return true;
+    else if(comando == 11 && this->nombre != "" && this->nombre.length() <= 10)return true;
     else if(comando == 12 && this->usr != "" && this->pwd != "" && this->grp != "")return true;
     else if(comando == 13 && this->usr != "")return true;
     else if(comando == 14 && this->path != "" && this->ugo != "")return true;
@@ -1216,7 +1620,6 @@ void Ejecutar::colocarParametros(Nodo *raiz){
             {
                 if(raiz->hijos.at(0).tipo == 24 || raiz->hijos.at(0).tipo == 26) this->nombre = valor;
                 else cout << "error: Se espera un identificador o mbr/disk para 'name'" << endl;
-
                 if(this->nombre.length() > 16){
                     this->nombre = "";
                     cout << "error: el nombre de la particion no debe ser mayor a 16 caracteres" << endl;
@@ -1239,16 +1642,14 @@ void Ejecutar::colocarParametros(Nodo *raiz){
             break;
         case 56: //pwd
         {
-            if(valor.length() <= 10){
-                if(raiz->hijos.at(0).tipo == 24 || raiz->hijos.at(0).tipo == 26) this->usr = valor;
-                else cout << "error: se espera un identificador para 'pwd'" << endl;
-            }else cout << "error: el tamano de la contrasena no puede ser mayor a diez" << endl;
+            if(valor.length() <= 10)this->pwd = valor;
+            else cout << "error: el tamano de la contrasena no puede ser mayor a diez" << endl;
         }
             break;
         case 57: //grp
         {
             if(valor.length() <= 10){
-                if(raiz->hijos.at(0).tipo == 24 || raiz->hijos.at(0).tipo == 26) this->usr = valor;
+                if(raiz->hijos.at(0).tipo == 24 || raiz->hijos.at(0).tipo == 26) this->grp = valor;
                 else cout << "error: se espera un identificador para 'grp'" << endl;
             }else cout << "error: el tamano del nombre del grupo no puede ser mayor a diez" << endl;
         }
@@ -1261,25 +1662,25 @@ void Ejecutar::colocarParametros(Nodo *raiz){
             break;
         case 59: //cont
         {
-            if(valor.contains('/') || valor.contains('.')) this->path = valor;
+            if(valor.contains('/') || valor.contains('.')) this->cont = valor;
             else cout << "error: Verificar el directorio " << valor.toStdString() << endl;
         }
             break;
         case 60: // file
         {
-            if(valor.contains('/') || valor.contains('.')) this->path = valor;
+            if(valor.contains('/') || valor.contains('.')) this->fileParam = valor;
             else cout << "error: Verificar el directorio " << valor.toStdString() << endl;
         }
             break;
         case 61: // dest
         {
-            if(valor.contains('/') || valor.contains('.')) this->path = valor;
+            if(valor.contains('/') || valor.contains('.')) this->dest = valor;
             else cout << "error: Verificar el directorio " << valor.toStdString() << endl;
         }
             break;
         case 62: // ruta
         {
-            if(valor.contains('/') || valor.contains('.')) this->path = valor;
+            if(valor.contains('/') || valor.contains('.')) this->ruta = valor;
             else cout << "error: Verificar el directorio " << valor.toStdString() << endl;
         }
             break;
@@ -1404,4 +1805,10 @@ string Ejecutar::intToString(int num)
         num /= 10;
     }
     return numAsStr;
+}
+
+QString Ejecutar::traducirPermisos(int permisos){
+    if(permisos >= -1 && permisos <= 777){
+
+    }
 }

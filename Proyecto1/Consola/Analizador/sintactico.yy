@@ -153,6 +153,7 @@ COMANDO: rmkdisk LPARAM
         | rlogin LPARAM
         {
             $$ = new Nodo(@1.first_line, @1.first_column,32);
+            $$->agregar(*$2);
         }
         | rlogout
         {
@@ -383,11 +384,15 @@ DATO: numero
     }
     | nombre
     {
-        $$ = new Nodo(@1.first_line, @1.first_column,54,$1);
+        $$ = new Nodo(@1.first_line, @1.first_column,24,$1);
     }
     | rutaRaiz
     {
         $$ = new Nodo(@1.first_line, @1.first_column,65,$1);
+    }
+    | rfile
+    {
+        $$ = new Nodo(@1.first_line, @1.first_column,24,$1);
     }
     | error
     {

@@ -23,6 +23,7 @@ SOURCES += \
         Montar/Disco.cpp \
         Montar/Montar.cpp \
         Montar/Particion.cpp \
+        Usuario.cpp \
         main.cpp
 
 # Default rules for deployment.
@@ -42,4 +43,5 @@ HEADERS += \
     Ejecutar.h \
     Montar/Disco.h \
     Montar/Montar.h \
-    Montar/Particion.h
+    Montar/Particion.h \
+    Usuario.h

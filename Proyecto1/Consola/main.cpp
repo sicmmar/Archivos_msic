@@ -5,6 +5,7 @@
 #include "Analizador/Graficar.h"
 #include "Montar/Montar.h"
 #include "Ejecutar.h"
+#include "Usuario.h"
 #include <QString>
 
 extern int yyparse(); //
@@ -16,6 +17,7 @@ extern int yylineno;
 using namespace::std;
 int salir = 1;
 Montar *listaParticiones = new Montar();
+Usuario *usuario = new Usuario();
 
 int salida(){
     if(salir == 1){
@@ -52,8 +54,9 @@ int main()
             yylineno = 0;
             if(yyparse()==0){
                 Ejecutar *ejecutar = new Ejecutar();
-                ejecutar->ejecutar(raiz, listaParticiones);
+                ejecutar->ejecutar(raiz, listaParticiones, usuario);
                 listaParticiones = ejecutar->listaParticiones;
+                usuario = ejecutar->usuario;
             }
         }else return 0;
     }

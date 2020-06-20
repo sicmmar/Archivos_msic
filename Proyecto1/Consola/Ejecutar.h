@@ -4,14 +4,18 @@
 #include "Analizador/Nodo.h"
 #include "Montar/Montar.h"
 #include <iostream>
+#include "Usuario.h"
+
 using namespace::std;
 
 class Ejecutar{
 public:
     Nodo *raiz;
     Ejecutar();
-    void ejecutar(Nodo *raiz, Montar *listaParticiones);
+    void ejecutar(Nodo *raiz, Montar *listaParticiones, Usuario *usuario);
     Montar *listaParticiones;
+    Usuario *usuario;
+
 
 private:
     void recorrer(Nodo *raiz);
@@ -55,6 +59,7 @@ private:
     string obtenerFirma();
     string intToString(int num);
     bool reporteValido(QString nombre);
+    QString traducirPermisos(int permisos);
 };
 
 #endif // EJECUTAR_H
