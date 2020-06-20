@@ -60,6 +60,7 @@ SOURCES       = ../Consola/Analizador/Graficar.cpp \
 		../Consola/Montar/Disco.cpp \
 		../Consola/Montar/Montar.cpp \
 		../Consola/Montar/Particion.cpp \
+		../Consola/Usuario.cpp \
 		../Consola/main.cpp 
 OBJECTS       = Graficar.o \
 		Nodo.o \
@@ -69,6 +70,7 @@ OBJECTS       = Graficar.o \
 		Disco.o \
 		Montar.o \
 		Particion.o \
+		Usuario.o \
 		main.o
 DIST          = ../Consola/Analizador/lexico.l \
 		../Consola/Analizador/sintactico.yy \
@@ -275,7 +277,8 @@ DIST          = ../Consola/Analizador/lexico.l \
 		../Consola/Ejecutar.h \
 		../Consola/Montar/Disco.h \
 		../Consola/Montar/Montar.h \
-		../Consola/Montar/Particion.h ../Consola/Analizador/Graficar.cpp \
+		../Consola/Montar/Particion.h \
+		../Consola/Usuario.h ../Consola/Analizador/Graficar.cpp \
 		../Consola/Analizador/Nodo.cpp \
 		../Consola/Analizador/parser.cpp \
 		../Consola/Analizador/scanner.cpp \
@@ -283,6 +286,7 @@ DIST          = ../Consola/Analizador/lexico.l \
 		../Consola/Montar/Disco.cpp \
 		../Consola/Montar/Montar.cpp \
 		../Consola/Montar/Particion.cpp \
+		../Consola/Usuario.cpp \
 		../Consola/main.cpp
 QMAKE_TARGET  = Consola
 DESTDIR       = 
@@ -705,8 +709,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/qt/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents ../Consola/Analizador/Graficar.h ../Consola/Analizador/Nodo.h ../Consola/Analizador/parser.h ../Consola/Analizador/scanner.h ../Consola/Ejecutar.h ../Consola/Montar/Disco.h ../Consola/Montar/Montar.h ../Consola/Montar/Particion.h $(DISTDIR)/
-	$(COPY_FILE) --parents ../Consola/Analizador/Graficar.cpp ../Consola/Analizador/Nodo.cpp ../Consola/Analizador/parser.cpp ../Consola/Analizador/scanner.cpp ../Consola/Ejecutar.cpp ../Consola/Montar/Disco.cpp ../Consola/Montar/Montar.cpp ../Consola/Montar/Particion.cpp ../Consola/main.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ../Consola/Analizador/Graficar.h ../Consola/Analizador/Nodo.h ../Consola/Analizador/parser.h ../Consola/Analizador/scanner.h ../Consola/Ejecutar.h ../Consola/Montar/Disco.h ../Consola/Montar/Montar.h ../Consola/Montar/Particion.h ../Consola/Usuario.h $(DISTDIR)/
+	$(COPY_FILE) --parents ../Consola/Analizador/Graficar.cpp ../Consola/Analizador/Nodo.cpp ../Consola/Analizador/parser.cpp ../Consola/Analizador/scanner.cpp ../Consola/Ejecutar.cpp ../Consola/Montar/Disco.cpp ../Consola/Montar/Montar.cpp ../Consola/Montar/Particion.cpp ../Consola/Usuario.cpp ../Consola/main.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -774,6 +778,7 @@ Ejecutar.o: ../Consola/Ejecutar.cpp ../Consola/Ejecutar.h \
 		../Consola/Montar/Montar.h \
 		../Consola/Montar/Particion.h \
 		../Consola/Montar/Disco.h \
+		../Consola/Usuario.h \
 		../Consola/Analizador/parser.h \
 		../Consola/Analizador/scanner.h \
 		../Consola/Analizador/Graficar.h
@@ -790,6 +795,10 @@ Montar.o: ../Consola/Montar/Montar.cpp ../Consola/Montar/Montar.h \
 Particion.o: ../Consola/Montar/Particion.cpp ../Consola/Montar/Particion.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Particion.o ../Consola/Montar/Particion.cpp
 
+Usuario.o: ../Consola/Usuario.cpp ../Consola/Usuario.h \
+		../Consola/Montar/Particion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Usuario.o ../Consola/Usuario.cpp
+
 main.o: ../Consola/main.cpp ../Consola/Analizador/Nodo.h \
 		../Consola/Analizador/parser.h \
 		../Consola/Analizador/scanner.h \
@@ -797,7 +806,8 @@ main.o: ../Consola/main.cpp ../Consola/Analizador/Nodo.h \
 		../Consola/Montar/Montar.h \
 		../Consola/Montar/Particion.h \
 		../Consola/Montar/Disco.h \
-		../Consola/Ejecutar.h
+		../Consola/Ejecutar.h \
+		../Consola/Usuario.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../Consola/main.cpp
 
 ####### Install
