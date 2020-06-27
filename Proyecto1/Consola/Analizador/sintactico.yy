@@ -380,7 +380,7 @@ DATO: numero
     }
     | permisos
     {
-        $$ = new Nodo(@1.first_line, @1.first_column,53,$1);
+        $$ = new Nodo(@1.first_line, @1.first_column,23,$1);
     }
     | nombre
     {

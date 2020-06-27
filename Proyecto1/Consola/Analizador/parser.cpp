@@ -2230,7 +2230,7 @@ yyreduce:
   case 59:
 #line 382 "sintactico.yy"
     {
-        (yyval.nodito) = new Nodo((yylsp[0]).first_line, (yylsp[0]).first_column,53,(yyvsp[0].TEXT));
+        (yyval.nodito) = new Nodo((yylsp[0]).first_line, (yylsp[0]).first_column,23,(yyvsp[0].TEXT));
     }
 #line 2236 "parser.cpp"
     break;

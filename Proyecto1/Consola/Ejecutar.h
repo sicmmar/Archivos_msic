@@ -8,6 +8,77 @@
 
 using namespace::std;
 
+
+//struct
+
+struct MBR{
+    int mbr_tamano;
+    char mbr_fecha_creacion[32];
+    int mbr_signature;
+    char disk_fit;
+    Partition mbr_partition[4];
+};
+
+struct SuperBlock{
+    int s_filesystem_type;
+    int s_inodes_count;
+    int s_blocks_count;
+    int s_free_block_count;
+    int s_free_inodes_count;
+    char s_mtime[32];
+    char s_umtime[32];
+    int s_mnt_count;
+    int s_magic;
+    int s_inode_size;
+    int s_block_size;
+    int s_first_ino;
+    int s_first_blo;
+    int s_bm_inode_start;
+    int s_bm_block_start;
+    int s_inode_start;
+    int s_block_start;
+    int s_journal_count;
+};
+
+struct Inode{
+    int i_id;
+    int i_uid;
+    int i_gid;
+    int i_size;
+    char i_atime[32];
+    char i_mtime[32];
+    int i_block[15];
+    int i_type;
+    int i_perm;
+};
+
+struct Content{
+    char b_name[12];
+    int b_inode;
+};
+
+struct Bloque_Carpeta{
+    int b_id;
+    Content b_content[4];
+};
+
+struct Bloque_Archivo{
+    int b_id;
+    char b_content[64];
+};
+
+struct Bloque_Apuntador{
+    int b_id;
+    int b_pointers[16];
+};
+
+struct Journal{
+    char j_fecha_hora[32];
+    char j_user[12];
+    char j_operation[256];
+};
+
+
 class Ejecutar{
 public:
     Nodo *raiz;
@@ -15,10 +86,12 @@ public:
     void ejecutar(Nodo *raiz, Montar *listaParticiones, Usuario *usuario);
     Montar *listaParticiones;
     Usuario *usuario;
+    bool R, P;
 
 
 private:
     void recorrer(Nodo *raiz);
+    void ponerP(Nodo *raiz);
     void mkdisk(Nodo *raiz);
     void rmdisk(Nodo *raiz);
     void fdisk(Nodo *raiz);
@@ -49,7 +122,6 @@ private:
     QString fit = "", unit = "", path = "", type = "";
     QString del = "", nombre = "", add = "", id = "";
     QString usr = "", pwd = "", grp = "", ugo = "";
-    bool R = false, P = false;
     QString cont = "", fileParam = "", dest = "", ruta = "";
     void limpiarVariables();
     void colocarParametros(Nodo *raiz);
@@ -60,6 +132,7 @@ private:
     string intToString(int num);
     bool reporteValido(QString nombre);
     QString traducirPermisos(int permisos);
+    void colocar(QString path, int inodo_actual, SuperBlock SB, FILE* disco);
 };
 
 #endif // EJECUTAR_H

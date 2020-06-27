@@ -7,6 +7,8 @@ class Usuario{
 public:
     Usuario();
     bool hayUsuario;
+    int iden;
+    int idGrupo;
     char nombre[10];
     char passwd[10];
     char grupo[10];
